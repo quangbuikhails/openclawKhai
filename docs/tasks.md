@@ -27,6 +27,7 @@ _(chưa có)_
   - Làm: sao chép phần cấu hình (đã xóa token, mật khẩu) vào `deploy/`, kèm `deploy/README.md` ngắn ghi cách áp dụng. Cố định `OPENCLAW_IMAGE` theo phiên bản đang chạy (PLAN.md mục 6), ghi dòng đầu vào bảng phiên bản.
   - Kiểm chứng: `git grep -nIiE "token|password|secret|cookie"` chỉ ra chỗ giữ chỗ như `<ĐIỀN_TOKEN>`, không có giá trị thật.
   - Ghi nhận: 15/10/2026; OpenClaw 2026.10.3 (59cb447), digest `sha256:70b8dbd2…`, bổ sung vào dòng sẵn có của bảng phiên bản. Cố định theo digest vì chưa kiểm chứng tên nhãn image trên ghcr.io. `.env` thật vẫn để `latest`, anh Khải tự đổi theo `deploy/README.md`.
+  - Hoàn tất 15/10/2026: đã ghim OPENCLAW_IMAGE theo digest sha256:70b8dbd2… trong ~/apps/openclaw/.env (thay cho latest nêu ở dòng trên); docker compose up -d openclaw-gateway tạo lại container; healthz trả ok, container healthy sau 1-3 phút khởi động (lần curl đầu bị reset do chưa sẵn sàng); openclaw-bot và 9router-bot vẫn chạy bình thường.
 
 - [ ] **G1-04 Viết SOUL.md và AGENTS.md cho trợ lý**
   - Làm: tạo `openclaw-workspace/SOUL.md` (giọng văn, xưng hô, nguyên tắc riêng tư, tự giới thiệu là trợ lý AI) và `openclaw-workspace/AGENTS.md` (việc được làm, không được làm), dựa trên bản nháp `ban-nhap/SOUL.md`, `ban-nhap/AGENTS-tro-ly.md` (anh Khải đưa vào khi giao task). Đối chiếu tài liệu OpenClaw, trình cách gắn workspace để chốt C9.
