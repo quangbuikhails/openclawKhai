@@ -7,7 +7,7 @@
 
 ```
 Bot Zalo chính thức ─┐
-Telegram (dự phòng) ─┼─► OpenClaw Gateway (Docker, 127.0.0.1:18789) ─► Codex (OAuth ChatGPT)
+Telegram (dự phòng) ─┼─► OpenClaw Gateway (Docker, 127.0.0.1:28789) ─► Codex (OAuth ChatGPT)
 Zalo cá nhân (Gói 3) ┘            │
                                   ├─► Google Sheets  (biểu theo dõi: nguồn dữ liệu gốc)
                                   ├─► Google Drive   (tệp văn bản gốc, Gói 2C)
@@ -18,7 +18,8 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 Điện thoại ─► web app qua mạng riêng (C16), không qua Internet công cộng
 ```
 
-- OpenClaw cài tại `~/apps/openclaw` (trong ổ Ubuntu WSL, không đặt ở `/mnt/c/...`).
+- OpenClaw cài tại `~/apps/openclaw` (trong ổ Ubuntu WSL, không đặt ở `/mnt/c/...`). Cấu hình và workspace của trợ lý nằm ở `~/.openclaw` (ngoài repo, không commit).
+- Máy anh Khải còn một bản OpenClaw khác phục vụ việc riêng (container `openclaw-bot`, mã nguồn ở `D:\bot\docker\openclaw`) và container `9router-bot`. Hai thứ này không thuộc dự án: không dừng, không xóa, không chạy lệnh Docker trong thư mục của chúng, không dùng chung token bot Telegram/Zalo (D19).
 - Repo `khai-phien-ban-so` chứa phần riêng của dự án; gắn vào OpenClaw bằng cấu hình, không sửa mã nguồn OpenClaw.
 - Repo đặt tại ổ Ubuntu WSL (ví dụ `~/projects/khai-phien-ban-so`). Cách gắn `openclaw-workspace/` làm workspace của trợ lý: xem C9.
 - Điểm yếu đã biết: máy chạy Gateway tắt thì mọi kênh dừng; Google Calendar trên điện thoại là lớp dự phòng cho lịch hẹn.
@@ -45,6 +46,7 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 | D16 | Kanban 4 cột: Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong; Hủy ẩn | Anh Khải chốt 14/10/2026 |
 | D17 | Mỗi việc có hạn tạo hai sự kiện cả ngày trên lịch "Công việc": [Nhắc] và [Hạn] | Điện thoại vẫn báo khi máy chạy trợ lý tắt; anh Khải đồng ý 14/10/2026 |
 | D18 | Web app xem và thao tác được trên điện thoại, qua mạng riêng, không mở ra Internet công cộng (cách cụ thể: C16) | Anh Khải đồng ý 14/10/2026 |
+| D19 | Bản OpenClaw của dự án chạy cách ly với bản đang có sẵn trên máy: tên dự án Compose `khai-pbs` (ghi trong `~/apps/openclaw/.env`); Gateway `127.0.0.1:28789`, cầu nối `127.0.0.1:28790`, MS Teams `127.0.0.1:28978`; `docker-compose.yml` đã thêm `127.0.0.1:` vào cả ba cổng (tệp gốc lưu ở `docker-compose.yml.bak`); đăng nhập Codex riêng; bot Telegram/Zalo riêng | Anh Khải đồng ý 15/10/2026; cài xong và kiểm tra 15/10/2026 (G1-02) |
 
 ## 3. Mục cần chốt
 
@@ -110,14 +112,15 @@ Quy ước:
 
 | Bí mật | Nơi lưu |
 |---|---|
-| Token Gateway | `~/apps/openclaw/.env` (do script cài đặt sinh ra) |
+| Token Gateway | `~/apps/openclaw/.env` (do script cài đặt sinh ra); không in ra, không gửi vào chat |
+| Đăng nhập Codex (OAuth ChatGPT) và cấu hình OpenClaw | `~/.openclaw` và thư mục bí mật xác thực `~/.openclaw-auth-profile-secrets` (mặc định của `docker-compose.yml`); ngoài repo |
 | Token bot Zalo, bot Telegram | Cấu hình OpenClaw hoặc `.env`, không đưa vào repo |
 | Thông tin xác thực Google | `secrets/` (gitignore) |
 | Phiên đăng nhập Zalo cá nhân | Volume của OpenClaw, không sao chép ra ngoài |
 
 ## 6. Triển khai, sao lưu, quay lui
 
-**Phiên bản cố định.** `OPENCLAW_IMAGE` trong `~/apps/openclaw/.env` ghi số phiên bản cụ thể thay cho `latest` `[cần kiểm chứng tên nhãn image trên ghcr.io/openclaw/openclaw]`.
+**Phiên bản cố định.** `OPENCLAW_IMAGE` trong `~/apps/openclaw/.env` ghi số phiên bản cụ thể thay cho `latest` (hiện đang là `ghcr.io/openclaw/openclaw:latest`, bản chạy là 2026.10.3, mã 59cb447; cố định ở G1-03) `[cần kiểm chứng tên nhãn image trên ghcr.io/openclaw/openclaw]`.
 
 **Mỗi lần đưa lên chạy thật** (đồng bộ thư mục trợ lý hoặc nâng phiên bản OpenClaw):
 
@@ -132,7 +135,7 @@ Quy ước:
 
 | Ngày | Nhãn git | Phiên bản OpenClaw | Thay đổi | Kiểm tra 7.3 |
 |---|---|---|---|---|
-| | | | | |
+| 15/10/2026 | (chưa gắn nhãn) | 2026.10.3 (59cb447) | Cài lần đầu theo D19 (G1-02); mô hình mặc định `openai/gpt-6-astra` | Chưa áp dụng |
 
 **Sao lưu**
 - Sao lưu thư mục cấu hình và workspace của OpenClaw trước mỗi lần triển khai và định kỳ; không sao lưu lên dịch vụ công khai.

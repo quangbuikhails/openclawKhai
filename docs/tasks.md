@@ -18,9 +18,10 @@ _(chưa có)_
   - Làm: đặt repo tại `~/projects/khai-phien-ban-so`; `git init`; tạo `.gitignore` (đã có mẫu); commit các tệp `AGENTS.md`, `CLAUDE.md`, `docs/`.
   - Kiểm chứng: `git status` sạch; `git check-ignore .env secrets/x tmp/x` trả về cả ba đường dẫn.
 
-- [ ] **G1-02 Cài OpenClaw bằng Docker và đăng nhập Codex** _(anh Khải tự chạy; agent chỉ hướng dẫn và đọc log)_
+- [x] **G1-02 Cài OpenClaw bằng Docker và đăng nhập Codex** _(anh Khải tự chạy; agent chỉ hướng dẫn và đọc log)_
   - Làm: theo hướng dẫn cài đặt đã có; OpenClaw nằm ở `~/apps/openclaw`.
-  - Kiểm chứng: `curl -fsS http://127.0.0.1:18789/healthz` thành công; `docker compose run --rm openclaw-cli models list` có mô hình Codex.
+  - Kiểm chứng: `curl -fsS http://127.0.0.1:28789/healthz` thành công; `docker compose exec openclaw-gateway node dist/index.js models list` có mô hình Codex.
+  - Ghi nhận: 15/10/2026; OpenClaw 2026.10.3 (59cb447), image `ghcr.io/openclaw/openclaw:latest`; cài theo D19 (tên dự án `khai-pbs`, cổng 28789/28790/28978, khóa `127.0.0.1`); đăng nhập Codex bằng device code, mô hình mặc định `openai/gpt-6-astra`, `models list` có Auth yes; `openclaw-bot` (bản cũ) vẫn chạy. Lỗi đáng nhớ: chạy công cụ dòng lệnh ngay sau khi Gateway khởi động báo GatewayLockNamespaceError (chờ 90 giây hoặc dùng `exec`); cảnh báo "Failed to reset agents.defaults.sandbox.mode to off" cần kiểm tra lại. Kênh chat và tìm kiếm web bỏ qua, làm sau.
 
 - [ ] **G1-03 Ghi lại cấu hình mẫu vào repo**
   - Làm: sao chép phần cấu hình (đã xóa token, mật khẩu) vào `deploy/`, kèm `deploy/README.md` ngắn ghi cách áp dụng. Cố định `OPENCLAW_IMAGE` theo phiên bản đang chạy (PLAN.md mục 6), ghi dòng đầu vào bảng phiên bản.

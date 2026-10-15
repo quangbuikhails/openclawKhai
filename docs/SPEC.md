@@ -30,7 +30,7 @@ Một trợ lý AI cá nhân giúp anh Khải:
 ### Gói 1 — Hạ tầng
 
 - OpenClaw chạy trong Docker trên máy Windows của anh Khải, Codex làm mô hình AI.
-- Chat thử được qua trang quản trị (Control UI) tại `http://127.0.0.1:18789/`.
+- Chat thử được qua trang quản trị (Control UI) tại `http://127.0.0.1:28789/`.
 
 **Nghiệm thu**
 - [ ] `healthz` trả về thành công.
