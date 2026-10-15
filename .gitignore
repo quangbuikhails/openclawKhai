@@ -1,0 +1,28 @@
+# Bí mật
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+credentials*.json
+token*.json
+
+# Tệp tạm
+tmp/
+*.log
+*.bak
+*.tmp
+
+# Web app
+node_modules/
+dist/
+.vite/
+
+# Hệ điều hành, trình soạn thảo
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/settings.json
+.idea/

@@ -1,0 +1,154 @@
+# PLAN — Kiến trúc và quyết định
+
+> Ghi các quyết định kỹ thuật đã chốt và các mục còn chờ chốt.
+> Agent không tự quyết các mục `[CẦN CHỐT]`; khi một mục được chốt, chuyển nó xuống bảng "Quyết định đã chốt".
+
+## 1. Kiến trúc tổng thể
+
+```
+Bot Zalo chính thức ─┐
+Telegram (dự phòng) ─┼─► OpenClaw Gateway (Docker, 127.0.0.1:18789) ─► Codex (OAuth ChatGPT)
+Zalo cá nhân (Gói 3) ┘            │
+                                  ├─► Google Sheets  (biểu theo dõi: nguồn dữ liệu gốc)
+                                  ├─► Google Drive   (tệp văn bản gốc, Gói 2C)
+                                  ├─► Google Calendar (lịch hẹn; sự kiện [Nhắc], [Hạn])
+                                  └─► Bộ lập lịch của OpenClaw (nhắc nhở, bản tin đầu ngày)
+
+Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc, ghi) và Gateway (trạng thái kênh)
+Điện thoại ─► web app qua mạng riêng (C16), không qua Internet công cộng
+```
+
+- OpenClaw cài tại `~/apps/openclaw` (trong ổ Ubuntu WSL, không đặt ở `/mnt/c/...`).
+- Repo `khai-phien-ban-so` chứa phần riêng của dự án; gắn vào OpenClaw bằng cấu hình, không sửa mã nguồn OpenClaw.
+- Repo đặt tại ổ Ubuntu WSL (ví dụ `~/projects/khai-phien-ban-so`). Cách gắn `openclaw-workspace/` làm workspace của trợ lý: xem C9.
+- Điểm yếu đã biết: máy chạy Gateway tắt thì mọi kênh dừng; Google Calendar trên điện thoại là lớp dự phòng cho lịch hẹn.
+
+## 2. Quyết định đã chốt
+
+| # | Quyết định | Lý do |
+|---|---|---|
+| D1 | Nền tảng agent: OpenClaw chạy Docker trên Windows (WSL2) | Cài gọn, cô lập với máy |
+| D2 | Mô hình AI: Codex qua OAuth ChatGPT | Dùng gói ChatGPT sẵn có, không cần API key |
+| D3 | Công việc lưu trên Google Sheets, lịch hẹn trên Google Calendar, tệp văn bản trên Google Drive | Xem được trên điện thoại khi trợ lý không chạy |
+| D4 | Kênh chính: bot Zalo chính thức; Telegram làm dự phòng | Kênh chính thức ít rủi ro khóa tài khoản |
+| D5 | Zalo cá nhân dùng tài khoản phụ, làm sau cùng (Gói 3) | Thư viện không chính thức, rủi ro cao |
+| D6 | Gateway chỉ nghe trên `127.0.0.1` | Không lộ ra mạng ngoài |
+| D7 | Thứ tự triển khai: Gói 1 → 2 → 2C → 4 → 2B → 3 (đổi ngày 14/10/2026) | Theo dõi văn bản giao việc là nhu cầu chính: biểu, nhắc, tiếp nhận văn bản và web app Kanban làm trước; chatbot và trả lời thay làm sau |
+| D8 | Tài liệu dự án chỉ gồm AGENTS.md, CLAUDE.md và `docs/` (SPEC, PLAN, tasks, WORKFLOW); không có tệp nhật ký riêng, kết quả mỗi task ghi ở dòng `Ghi nhận` trong tasks.md | Một nguồn chỉ dẫn, chống rác tài liệu |
+| D9 | Chia vai công cụ: Claude Project trên claude.ai để bàn phương án, soạn tài liệu, đọc log; Codex/Claude Code chạy trong repo để sửa tệp và kiểm chứng | Repo là nguồn gốc; tránh hai nơi cùng sửa |
+| D10 | Cố định phiên bản OpenClaw; mỗi lần đưa lên chạy thật có nhãn git, kiểm tra sau triển khai và quay lui khi lỗi (mục 6) | `latest` khiến mỗi lần cập nhật nhận bản mới ngoài kiểm soát; có nhãn mới quay lui được |
+| D11 | Bộ kiểm thử hồi quy (SPEC mục 7) chạy lại sau mọi thay đổi hành vi của trợ lý | Sửa một câu chỉ dẫn có thể đổi hành vi ở chỗ khác |
+| D12 | Tên sản phẩm: Khải Phiên Bản Số; thư mục repo `khai-phien-ban-so` (thay cho Zalo Agent / `zalo-agent`) | Anh Khải chốt ngày 13/10/2026 |
+| D13 | Được gửi văn bản thông thường (không mật) cho trợ lý qua cả bot Zalo và Telegram; văn bản Mật, Tối mật, Tuyệt mật tuyệt đối không | Anh Khải chốt 14/10/2026, cam kết tự kiểm soát; chấp nhận Telegram không mã hóa đầu cuối |
+| D14 | Biểu theo dõi 14 cột (mục 4), thay cho bảng 10 cột đề xuất trước; người phụ trách mặc định là anh Khải; văn bản nhiều nhiệm vụ ghi một dòng, liệt kê nhiệm vụ ở Ghi chú | Anh Khải chốt 14/10/2026 (thay C3) |
+| D15 | Ngày nhắc việc = Hạn hoàn thành − 3 ngày (trống thì theo Thời hạn trong văn bản); rơi vào thứ Bảy, Chủ nhật thì lùi về thứ Sáu | Anh Khải chốt 14/10/2026 |
+| D16 | Kanban 4 cột: Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong; Hủy ẩn | Anh Khải chốt 14/10/2026 |
+| D17 | Mỗi việc có hạn tạo hai sự kiện cả ngày trên lịch "Công việc": [Nhắc] và [Hạn] | Điện thoại vẫn báo khi máy chạy trợ lý tắt; anh Khải đồng ý 14/10/2026 |
+| D18 | Web app xem và thao tác được trên điện thoại, qua mạng riêng, không mở ra Internet công cộng (cách cụ thể: C16) | Anh Khải đồng ý 14/10/2026 |
+
+## 3. Mục cần chốt
+
+| # | Nội dung | Gói | Ghi chú |
+|---|---|---|---|
+| C1 | Cách trợ lý đọc/ghi Google Sheets và Calendar: skill có sẵn của OpenClaw, MCP server, hay script riêng trong `scripts/` | 2 | Agent khảo sát và trình phương án trước khi làm |
+| C2 | Loại thông tin xác thực Google: Service Account hay OAuth tài khoản cá nhân | 2 | Calendar cá nhân thường cần OAuth hoặc chia sẻ lịch cho Service Account. Đề xuất: lịch riêng "Công việc", bảng tính riêng và một thư mục Drive riêng (Gói 2C), chỉ cấp quyền trên ba mục này |
+| C4 | Nhắc trước giờ hẹn bao lâu; giờ gửi bản tin đầu ngày; có gửi cuối tuần không; tần suất nhắc việc quá hạn; có tổng kết tuần không; Telegram gửi song song hay chỉ khi bot Zalo lỗi | 2 | Đề xuất: trước 30 phút; bản tin 7:00 thứ Hai–Sáu; quá hạn gộp vào bản tin; tổng kết 16:30 thứ Sáu; Telegram chỉ khi bot Zalo lỗi (đỡ trùng tin). Nhắc hạn công việc đã chốt ở D15 |
+| C5 | Danh sách người được trả lời và quy tắc vào hàng chờ duyệt | 3 | |
+| C6 | Công nghệ, xác thực của web app; cách web app ghi vào Sheets khi kéo thẻ Kanban | 4 | Mặc định dự kiến React + Vite; một máy chủ nhỏ chạy cùng máy, dùng chung thông tin xác thực Google ở `secrets/`, trình duyệt không giữ khóa Google; có đăng nhập |
+| C7 | Có chuyển lên VPS để chạy liên tục không | Sau 2 | |
+| C8 | Thêm, sửa việc: chờ chủ xác nhận rồi mới ghi, hay ghi ngay kèm lệnh hoàn tác | 2 | Đề xuất: chờ xác nhận trong giai đoạn chạy thử (hiểu sai ngày giờ là lỗi hay gặp); ổn định thì cân nhắc ghi ngay + hoàn tác |
+| C9 | Gắn `openclaw-workspace/` vào OpenClaw: mount trực tiếp hay script chép | 1 | Xác định ở G1-04 sau khi đối chiếu tài liệu OpenClaw |
+| C10 | Gói 3: có trả lời trong nhóm không | 3 | Đề xuất: tắt; nếu bật thì chỉ nhóm được chọn, chỉ khi được nhắc tên |
+| C11 | Chỉ số đo kết quả (SPEC mục 1) | 2 | Đề xuất: không việc nào quá hạn mà chưa được nhắc trước ≥ 1 ngày; thêm việc < 30 giây; đo 4 tuần sau nghiệm thu Gói 2 |
+| C12 | Nhà cung cấp tìm kiếm web | 2B | Tài liệu OpenClaw: DuckDuckGo không cần khóa nhưng là tích hợp thử nghiệm, không chính thức, có thể hỏng hoặc bị chặn; Brave Search dùng API (cần khóa) được khuyến nghị cho dùng thật. Đề xuất: thử DuckDuckGo, hay hỏng thì chuyển Brave (chi phí cần kiểm chứng) |
+| C13 | Cách tạo tệp Word | 2B | OpenClaw không có công cụ tạo .docx dựng sẵn. Đề xuất: một skill gọi script cố định trong workspace (không cho trợ lý chạy lệnh tùy ý); cần kiểm chứng image OpenClaw có sẵn Python/Node và thư viện tạo .docx hay phải thêm (thêm phụ thuộc phải duyệt) |
+| C14 | Nhà cung cấp tạo ảnh | 2B | Tài liệu OpenClaw: công cụ `image_generate` dùng được OpenAI qua đăng nhập ChatGPT/Codex, không cần khóa riêng, nhưng dùng chung hạn mức. Đề xuất: dùng OpenAI qua OAuth |
+| C15 | Giới hạn thư mục trợ lý được đọc, gửi tệp (`tools.fs.workspaceOnly`) | 2B | Mặc định `false`: trợ lý gửi được mọi tệp nó đọc được. Đề xuất: `true` để chỉ gửi tệp trong workspace và thư mục tạm |
+| C16 | Cách mở web app từ điện thoại | 4 | Phương án: (a) mạng riêng ảo Tailscale giữa máy chạy trợ lý và điện thoại, không mở cổng nào ra Internet (đề xuất); (b) đường hầm Cloudflare Tunnel kèm lớp đăng nhập Cloudflare Access; (c) mở cổng trên router: không dùng. Chi tiết, chi phí cần kiểm chứng khi làm |
+| C17 | Đọc tệp Word, PDF scan trong OpenClaw: dùng khả năng đọc tệp sẵn có hay script chuyển đổi riêng | 2C | Cần khảo sát ở G2C-01; bot Zalo mặc định nhận tệp ≤ 5 MB |
+
+## 4. Biểu theo dõi công việc (đã chốt D14)
+
+Bảng tính "Khải Phiên Bản Số – Biểu theo dõi", trang `bieu`. Tiêu đề cột hiển thị tiếng Việt (anh xem, sửa trên điện thoại); mã cột tiếng Anh dùng trong mã nguồn.
+
+| # | Tiêu đề cột | Mã cột | Kiểu, giá trị | Ai điền |
+|---|---|---|---|---|
+| 1 | STT | `stt` | Số tăng dần | Tự động |
+| 2 | Ngày nhận | `received_date` | dd/mm/yyyy | Tự động (ngày gửi cho trợ lý), sửa được |
+| 3 | Tên văn bản | `doc_title` | Trích yếu | Trợ lý bóc tách |
+| 4 | Số ký hiệu | `doc_number` | Ví dụ 123/UBND-KT | Trợ lý bóc tách |
+| 5 | Cơ quan ban hành | `issuer` | Văn bản | Trợ lý bóc tách (cột đề xuất thêm, bỏ được) |
+| 6 | Nội dung cần xử lý | `action_required` | Tóm tắt việc anh phải làm | Trợ lý bóc tách, anh sửa |
+| 7 | Người phụ trách | `owner` | Mặc định "Bùi Quang Khải" | Tự động |
+| 8 | Hạn hoàn thành | `due_date` | dd/mm/yyyy | Anh đặt (trợ lý đề xuất) |
+| 9 | Ưu tiên | `priority` | Cao / Thường | Anh đặt (trợ lý đề xuất) |
+| 10 | Trạng thái | `status` | Chưa xử lý / Đang xử lý / Chờ ý kiến / Đã xong / Hủy | Mặc định "Chưa xử lý"; đổi qua chat, Kanban hoặc sửa tay |
+| 11 | Ghi chú | `note` | Văn bản; văn bản nhiều nhiệm vụ thì liệt kê ở đây | Trợ lý, anh |
+| 12 | Link tài liệu | `doc_link` | Link tệp trên Google Drive | Tự động |
+| 13 | Thời hạn yêu cầu trong văn bản | `doc_deadline` | dd/mm/yyyy | Trợ lý bóc tách |
+| 14 | Ngày nhắc việc | `remind_date` | dd/mm/yyyy | Tự động theo D15 |
+
+Công thức Ngày nhắc việc (dòng 2, Hạn hoàn thành ở cột H, Thời hạn trong văn bản ở cột M), để trên Sheets cũng tự tính khi anh sửa tay:
+
+```
+=IF(AND(H2="",M2=""),"",LET(h,IF(H2<>"",H2,M2),r,h-3,IF(WEEKDAY(r,2)=6,r-1,IF(WEEKDAY(r,2)=7,r-2,r))))
+```
+
+Trang `log` (Truy vết): `time`, `channel` (`zalo` / `telegram` / `web` / `tay`), `action` (`them` / `sua` / `doi_trang_thai` / `doi_han` / `huy`), `stt`, `summary`.
+
+Quy ước:
+- Không xóa dòng; việc bỏ chuyển `Hủy`.
+- `status`, `priority` dùng danh sách thả xuống.
+- Định dạng: tô đỏ nhạt khi quá Hạn hoàn thành mà chưa `Đã xong`/`Hủy`; tô vàng nhạt khi hôm nay ≥ Ngày nhắc việc.
+- Việc không có văn bản (giao miệng, tự đặt) vẫn ghi vào biểu, các cột 3–5, 12, 13 để trống.
+
+**Google Drive (Gói 2C):** thư mục riêng "Khải Phiên Bản Số/Văn bản đến/<năm>/<tháng>", không chia sẻ cho ai. Tên tệp: `<yyyy-mm-dd>_<số ký hiệu, thay / bằng ->_<trích yếu rút gọn>.<đuôi gốc>`. Nhiều ảnh của một văn bản: ghép thành một tệp PDF nếu làm được, không thì để chung một thư mục con.
+
+**Google Calendar (D17):** sự kiện cả ngày "[Nhắc] <số ký hiệu> – <trích yếu>" vào Ngày nhắc việc và "[Hạn] …" vào Hạn hoàn thành; mô tả sự kiện ghi STT và link tệp. Đổi hạn thì dời sự kiện; Đã xong hoặc Hủy thì gỡ hai sự kiện.
+
+## 5. Bí mật và nơi lưu
+
+| Bí mật | Nơi lưu |
+|---|---|
+| Token Gateway | `~/apps/openclaw/.env` (do script cài đặt sinh ra) |
+| Token bot Zalo, bot Telegram | Cấu hình OpenClaw hoặc `.env`, không đưa vào repo |
+| Thông tin xác thực Google | `secrets/` (gitignore) |
+| Phiên đăng nhập Zalo cá nhân | Volume của OpenClaw, không sao chép ra ngoài |
+
+## 6. Triển khai, sao lưu, quay lui
+
+**Phiên bản cố định.** `OPENCLAW_IMAGE` trong `~/apps/openclaw/.env` ghi số phiên bản cụ thể thay cho `latest` `[cần kiểm chứng tên nhãn image trên ghcr.io/openclaw/openclaw]`.
+
+**Mỗi lần đưa lên chạy thật** (đồng bộ thư mục trợ lý hoặc nâng phiên bản OpenClaw):
+
+1. Bộ kiểm thử hồi quy (SPEC mục 7) đạt ở phần áp dụng.
+2. Sao lưu thư mục cấu hình và workspace của OpenClaw.
+3. Gắn nhãn git cho trạng thái sắp triển khai: `<gói>-v<số>`, ví dụ `goi2-v1`.
+4. Triển khai. Nâng OpenClaw: đọc ghi chú phát hành, sửa `OPENCLAW_IMAGE` sang phiên bản mới, `docker compose pull openclaw-gateway openclaw-cli`, `docker compose up -d openclaw-gateway`, `doctor`.
+5. Kiểm tra sau triển khai: SPEC mục 7.3 (`scripts/` có script chạy phần lệnh).
+6. Không đạt thì quay lui ngay, không sửa nóng: trả `OPENCLAW_IMAGE` về phiên bản cũ rồi `up -d`; trả thư mục trợ lý về nhãn trước (`git checkout <nhãn cũ> -- openclaw-workspace/`) rồi đồng bộ lại; nếu cần, khôi phục bản sao lưu ở bước 2. Ghi sự cố vào mục "Phát sinh" của tasks.md.
+
+**Bảng phiên bản đã triển khai** (mới nhất ở trên):
+
+| Ngày | Nhãn git | Phiên bản OpenClaw | Thay đổi | Kiểm tra 7.3 |
+|---|---|---|---|---|
+| | | | | |
+
+**Sao lưu**
+- Sao lưu thư mục cấu hình và workspace của OpenClaw trước mỗi lần triển khai và định kỳ; không sao lưu lên dịch vụ công khai.
+- Dữ liệu việc và lịch đã nằm trên Google nên không cần sao lưu riêng.
+
+## 7. Tài liệu tham chiếu
+
+| Tài liệu | Nơi | Ghi chú |
+|---|---|---|
+| Hướng dẫn dựng Zalo Agent bằng OpenClaw | https://claude.ai/code/artifact/1d7491e0-aed2-4bf9-ab44-33991d86f12a | Đường dẫn cài đặt trong hướng dẫn có thể khác; theo PLAN: OpenClaw ở `~/apps/openclaw` |
+| Sổ tay triển khai Khải Phiên Bản Số – từng bước | https://claude.ai/code/artifact/beeb7d46-cf97-4534-89d7-4355a6b12f8a | Các bước anh tự làm, câu giao việc, kiểm chứng theo từng task; đã cập nhật thứ tự D7, Gói 2C, Gói 4 |
+| Bản thiết kế "Khải Phiên Bản Số – Web quản lý" | https://claude.ai/artifact/E6c2CgbxKv2SxCe3Nskjrb | Giao diện Gói 4; làm trước màn A Biểu theo dõi, B Kanban, C Lịch công việc |
+| Bảng phân vai kênh Telegram/Zalo | `Kenh_Telegram_Zalo_Agent.xlsx` trong Claude Project | Bảy bước dựng Telegram, lưu ý pháp lý |
+| Bản nháp SOUL, AGENTS của trợ lý và 5 skill (thêm `tiep-nhan-van-ban`) | Thư mục `ban-nhap/` trong Claude Project, ngoài repo | Đầu vào cho G1-04, G2-04 → G2-06, Gói 2C và Gói 3 |
+| Tài liệu OpenClaw | https://docs.openclaw.ai | Đối chiếu trước khi dùng lệnh, khóa cấu hình mới |
+| Công cụ dựng sẵn (tìm kiếm, tải trang web, chạy lệnh) | https://docs.openclaw.ai/gateway/config-tools/built-in-tools | Gói 2B |
+| Tìm kiếm DuckDuckGo | https://docs.openclaw.ai/tools/duckduckgo-search | C12 |
+| Tạo ảnh | https://docs.openclaw.ai/tools/image-generation | C14 |
+| Gửi tệp, ảnh vào chat | https://docs.openclaw.ai/help/faq/media-and-attachments | C13, C15 |
