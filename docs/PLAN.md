@@ -120,7 +120,7 @@ Quy ước:
 
 ## 6. Triển khai, sao lưu, quay lui
 
-**Phiên bản cố định.** `OPENCLAW_IMAGE` trong `~/apps/openclaw/.env` ghi số phiên bản cụ thể thay cho `latest` (hiện đang là `ghcr.io/openclaw/openclaw:latest`, bản chạy là 2026.10.3, mã 59cb447; cố định ở G1-03) `[cần kiểm chứng tên nhãn image trên ghcr.io/openclaw/openclaw]`.
+**Phiên bản cố định.** `OPENCLAW_IMAGE` trong `~/apps/openclaw/.env` cố định theo digest thay cho `latest`, dạng `ghcr.io/openclaw/openclaw@sha256:<digest>`; cách lấy digest xem `deploy/README.md` (G1-03). Bản đang chạy: 2026.10.3, mã 59cb447, digest `sha256:70b8dbd23f8d27a206f43f9828fdebc87289e50d56dc55177354c9270d764026`.
 
 **Mỗi lần đưa lên chạy thật** (đồng bộ thư mục trợ lý hoặc nâng phiên bản OpenClaw):
 
@@ -135,7 +135,7 @@ Quy ước:
 
 | Ngày | Nhãn git | Phiên bản OpenClaw | Thay đổi | Kiểm tra 7.3 |
 |---|---|---|---|---|
-| 15/10/2026 | (chưa gắn nhãn) | 2026.10.3 (59cb447) | Cài lần đầu theo D19 (G1-02); mô hình mặc định `openai/gpt-6-astra` | Chưa áp dụng |
+| 15/10/2026 | (chưa gắn nhãn) | 2026.10.3 (59cb447), `sha256:70b8dbd23f8d…` | Cài lần đầu theo D19 (G1-02); mô hình mặc định `openai/gpt-6-astra` | Chưa áp dụng |
 
 **Sao lưu**
 - Sao lưu thư mục cấu hình và workspace của OpenClaw trước mỗi lần triển khai và định kỳ; không sao lưu lên dịch vụ công khai.

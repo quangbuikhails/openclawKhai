@@ -23,9 +23,10 @@ _(chưa có)_
   - Kiểm chứng: `curl -fsS http://127.0.0.1:28789/healthz` thành công; `docker compose exec openclaw-gateway node dist/index.js models list` có mô hình Codex.
   - Ghi nhận: 15/10/2026; OpenClaw 2026.10.3 (59cb447), image `ghcr.io/openclaw/openclaw:latest`; cài theo D19 (tên dự án `khai-pbs`, cổng 28789/28790/28978, khóa `127.0.0.1`); đăng nhập Codex bằng device code, mô hình mặc định `openai/gpt-6-astra`, `models list` có Auth yes; `openclaw-bot` (bản cũ) vẫn chạy. Lỗi đáng nhớ: chạy công cụ dòng lệnh ngay sau khi Gateway khởi động báo GatewayLockNamespaceError (chờ 90 giây hoặc dùng `exec`); cảnh báo "Failed to reset agents.defaults.sandbox.mode to off" cần kiểm tra lại. Kênh chat và tìm kiếm web bỏ qua, làm sau.
 
-- [ ] **G1-03 Ghi lại cấu hình mẫu vào repo**
+- [x] **G1-03 Ghi lại cấu hình mẫu vào repo**
   - Làm: sao chép phần cấu hình (đã xóa token, mật khẩu) vào `deploy/`, kèm `deploy/README.md` ngắn ghi cách áp dụng. Cố định `OPENCLAW_IMAGE` theo phiên bản đang chạy (PLAN.md mục 6), ghi dòng đầu vào bảng phiên bản.
   - Kiểm chứng: `git grep -nIiE "token|password|secret|cookie"` chỉ ra chỗ giữ chỗ như `<ĐIỀN_TOKEN>`, không có giá trị thật.
+  - Ghi nhận: 15/10/2026; OpenClaw 2026.10.3 (59cb447), digest `sha256:70b8dbd2…`, bổ sung vào dòng sẵn có của bảng phiên bản. Cố định theo digest vì chưa kiểm chứng tên nhãn image trên ghcr.io. `.env` thật vẫn để `latest`, anh Khải tự đổi theo `deploy/README.md`.
 
 - [ ] **G1-04 Viết SOUL.md và AGENTS.md cho trợ lý**
   - Làm: tạo `openclaw-workspace/SOUL.md` (giọng văn, xưng hô, nguyên tắc riêng tư, tự giới thiệu là trợ lý AI) và `openclaw-workspace/AGENTS.md` (việc được làm, không được làm), dựa trên bản nháp `ban-nhap/SOUL.md`, `ban-nhap/AGENTS-tro-ly.md` (anh Khải đưa vào khi giao task). Đối chiếu tài liệu OpenClaw, trình cách gắn workspace để chốt C9.
