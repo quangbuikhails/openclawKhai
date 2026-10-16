@@ -21,7 +21,7 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 - OpenClaw cài tại `~/apps/openclaw` (trong ổ Ubuntu WSL, không đặt ở `/mnt/c/...`). Cấu hình và workspace của trợ lý nằm ở `~/.openclaw` (ngoài repo, không commit).
 - Máy anh Khải còn một bản OpenClaw khác phục vụ việc riêng (container `openclaw-bot`, mã nguồn ở `D:\bot\docker\openclaw`) và container `9router-bot`. Hai thứ này không thuộc dự án: không dừng, không xóa, không chạy lệnh Docker trong thư mục của chúng, không dùng chung token bot Telegram/Zalo (D19).
 - Repo `khai-phien-ban-so` chứa phần riêng của dự án; gắn vào OpenClaw bằng cấu hình, không sửa mã nguồn OpenClaw.
-- Repo đặt tại ổ Ubuntu WSL (ví dụ `~/projects/khai-phien-ban-so`). Cách gắn `openclaw-workspace/` làm workspace của trợ lý: xem C9.
+- Repo đặt tại ổ Ubuntu WSL (ví dụ `~/projects/khai-phien-ban-so`). Cách gắn `openclaw-workspace/` làm workspace của trợ lý: xem D20.
 - Điểm yếu đã biết: máy chạy Gateway tắt thì mọi kênh dừng; Google Calendar trên điện thoại là lớp dự phòng cho lịch hẹn.
 
 ## 2. Quyết định đã chốt
@@ -47,6 +47,7 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 | D17 | Mỗi việc có hạn tạo hai sự kiện cả ngày trên lịch "Công việc": [Nhắc] và [Hạn] | Điện thoại vẫn báo khi máy chạy trợ lý tắt; anh Khải đồng ý 14/10/2026 |
 | D18 | Web app xem và thao tác được trên điện thoại, qua mạng riêng, không mở ra Internet công cộng (cách cụ thể: C16) | Anh Khải đồng ý 14/10/2026 |
 | D19 | Bản OpenClaw của dự án chạy cách ly với bản đang có sẵn trên máy: tên dự án Compose `khai-pbs` (ghi trong `~/apps/openclaw/.env`); Gateway `127.0.0.1:28789`, cầu nối `127.0.0.1:28790`, MS Teams `127.0.0.1:28978`; `docker-compose.yml` đã thêm `127.0.0.1:` vào cả ba cổng (tệp gốc lưu ở `docker-compose.yml.bak`); đăng nhập Codex riêng; bot Telegram/Zalo riêng | Anh Khải đồng ý 15/10/2026; cài xong và kiểm tra 15/10/2026 (G1-02) |
+| D20 | Gắn `openclaw-workspace/` vào OpenClaw bằng script chép một chiều (`scripts/dong-bo-workspace.sh`) từ repo sang `~/.openclaw/workspace`, không mount trực tiếp. Script chỉ chép `SOUL.md`, `AGENTS.md`, `skills/`; không ghi đè `USER.md`, `IDENTITY.md`, `BOOTSTRAP.md`, bộ nhớ và `.git/` của workspace; có `--dry-run`. Quay lui: `git checkout <nhãn cũ> -- openclaw-workspace/` rồi chạy lại script (mục 6) | Workspace thật hiện có git riêng và `USER.md` (theo anh Khải, 16/10/2026); `MEMORY.md`, `memory/` sẽ phát sinh khi chạy. Mount trực tiếp sẽ trộn hai lịch sử git và để trợ lý tự sửa thẳng vào repo; chép một chiều giữ repo sạch, xem được `diff` trước khi ghi. Trang https://docs.openclaw.ai/concepts/agent-workspace (đọc 16/10/2026) không nói gì về mount | Anh Khải chốt 16/10/2026 (G1-04) |
 
 ## 3. Mục cần chốt
 
@@ -59,7 +60,6 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 | C6 | Công nghệ, xác thực của web app; cách web app ghi vào Sheets khi kéo thẻ Kanban | 4 | Mặc định dự kiến React + Vite; một máy chủ nhỏ chạy cùng máy, dùng chung thông tin xác thực Google ở `secrets/`, trình duyệt không giữ khóa Google; có đăng nhập |
 | C7 | Có chuyển lên VPS để chạy liên tục không | Sau 2 | |
 | C8 | Thêm, sửa việc: chờ chủ xác nhận rồi mới ghi, hay ghi ngay kèm lệnh hoàn tác | 2 | Đề xuất: chờ xác nhận trong giai đoạn chạy thử (hiểu sai ngày giờ là lỗi hay gặp); ổn định thì cân nhắc ghi ngay + hoàn tác |
-| C9 | Gắn `openclaw-workspace/` vào OpenClaw: mount trực tiếp hay script chép | 1 | Xác định ở G1-04 sau khi đối chiếu tài liệu OpenClaw |
 | C10 | Gói 3: có trả lời trong nhóm không | 3 | Đề xuất: tắt; nếu bật thì chỉ nhóm được chọn, chỉ khi được nhắc tên |
 | C11 | Chỉ số đo kết quả (SPEC mục 1) | 2 | Đề xuất: không việc nào quá hạn mà chưa được nhắc trước ≥ 1 ngày; thêm việc < 30 giây; đo 4 tuần sau nghiệm thu Gói 2 |
 | C12 | Nhà cung cấp tìm kiếm web | 2B | Tài liệu OpenClaw: DuckDuckGo không cần khóa nhưng là tích hợp thử nghiệm, không chính thức, có thể hỏng hoặc bị chặn; Brave Search dùng API (cần khóa) được khuyến nghị cho dùng thật. Đề xuất: thử DuckDuckGo, hay hỏng thì chuyển Brave (chi phí cần kiểm chứng) |

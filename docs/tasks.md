@@ -32,6 +32,9 @@ _(chưa có)_
 - [ ] **G1-04 Viết SOUL.md và AGENTS.md cho trợ lý**
   - Làm: tạo `openclaw-workspace/SOUL.md` (giọng văn, xưng hô, nguyên tắc riêng tư, tự giới thiệu là trợ lý AI) và `openclaw-workspace/AGENTS.md` (việc được làm, không được làm), dựa trên bản nháp `ban-nhap/SOUL.md`, `ban-nhap/AGENTS-tro-ly.md` (anh Khải đưa vào khi giao task). Đối chiếu tài liệu OpenClaw, trình cách gắn workspace để chốt C9.
   - Kiểm chứng: gắn workspace vào OpenClaw; chạy các câu thử SPEC mục 7.1 làm được trên Control UI, dán câu hỏi và câu trả lời; anh Khải duyệt giọng văn.
+  - Ghi nhận (làm từng phần, chưa đánh `[x]`) 16/10/2026: đã làm `openclaw-workspace/SOUL.md`, `openclaw-workspace/AGENTS.md` (anh Khải đã duyệt cả hai) và `scripts/dong-bo-workspace.sh` (đã duyệt; thử trên bản sao trong `tmp/`: `--dry-run` không ghi gì, tệp được bảo vệ không đổi, chạy lần hai không đổi gì, báo lỗi đúng khi thiếu đích hoặc nguồn). Đã đối chiếu docs.openclaw.ai (`concepts/agent-workspace`, `concepts/soul`); C9 chốt thành D20 (PLAN.md). Chưa kiểm chứng: ngưỡng nạp bootstrap 20.000 ký tự mỗi tệp và 60.000 ký tự tổng (mặc định theo tài liệu) trên bản OpenClaw đang dùng; khóa `agents.defaults.skipBootstrap`; việc nạp `IDENTITY.md` và `memory/`.
+  - Còn lại: (1) đồng bộ lên workspace thật `/home/khai/.openclaw/workspace` (chạy `--dry-run` xem `diff` trước); (2) anh Khải tự điền `IDENTITY.md` và `USER.md`; (3) anh Khải tự xóa `BOOTSTRAP.md` trong workspace thật, agent không chạm `~/.openclaw`; (4) thử các câu 7.1 làm được trên Control UI, dán câu hỏi và câu trả lời; (5) anh Khải duyệt giọng văn.
+  - Cách xử lý `BOOTSTRAP.md`, `IDENTITY.md`, `USER.md` (đã thống nhất): ba tệp này không nằm trong script đồng bộ vì OpenClaw và trợ lý tự ghi vào. `BOOTSTRAP.md`: xóa tay sau khi `IDENTITY.md`, `USER.md` đã điền (OpenClaw cũng tự xóa khi workspace đã cấu hình). `IDENTITY.md`: điền tay một lần (tên, "trợ lý AI của anh Khải", emoji trống, bỏ avatar). `USER.md`: viết tay vài dòng "Luôn / Không bao giờ", mỗi dòng có `<!-- observed: yyyy-mm-dd | status: active -->`, giới hạn 4.000 ký tự.
 
 - [ ] **G1-05 Kiểm tra bảo mật**
   - Làm: chạy kiểm tra bảo mật của OpenClaw; rà soát thư mục được mount vào container.
@@ -100,4 +103,6 @@ _(Lập danh sách task khi bắt đầu gói.)_
 > Sự cố khi chạy thật ghi theo mẫu 4 dòng:
 > `Sự cố dd/mm:` hiện tượng · `Nguyên nhân:` … · `Đã khắc phục:` … · `Task mới:` mã task hoặc "không cần".
 
+- (Từ G1-04, làm ở G2-06) Khi làm G2-06 phải thêm lại vào `openclaw-workspace/AGENTS.md` quy tắc nhắc việc có kiểm soát. Bản mặc định của OpenClaw có phần "Automations - Be Proactive" (giờ yên tĩnh, khi nào được chủ động nhắn); G1-04 đã bỏ phần này vì trái với quy tắc xác nhận và chưa chốt.
+- (Từ G1-04, anh Khải tự làm) Trong workspace thật: điền `IDENTITY.md`, `USER.md`, rồi xóa `BOOTSTRAP.md`. Chi tiết ở dòng Ghi nhận của G1-04.
 - (Đề xuất, xem xét sau Gói 2) Việc định kỳ tự kiểm tra kênh và hạn đăng nhập Codex, báo qua Telegram khi có lỗi.
