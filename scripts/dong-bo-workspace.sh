@@ -98,4 +98,5 @@ if [[ $dry_run -eq 1 ]]; then
   echo "ĐẠT (dry-run): $changed mục sẽ đổi, chưa ghi gì"
 else
   echo "ĐẠT: đã đồng bộ, $changed mục đổi"
+  echo "Mở phiên mới trên Control UI để trợ lý nạp bản mới."
 fi
