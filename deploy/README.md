@@ -43,7 +43,7 @@ Rồi `docker compose up -d openclaw-gateway`. Digest đang dùng ghi trong bả
 
 ## Đăng nhập lại Codex
 
-Đăng nhập Codex (OAuth ChatGPT) của Gateway có hạn: `expiresAt` hiện là `1792943476465` (22:51 ngày 25/10/2026). Làm trước hạn này (mục tiêu 22/10/2026). Anh Khải tự chạy các bước dưới đây trong terminal Ubuntu (có TTY), đứng trong `~/apps/openclaw`; chỉ thao tác với `openclaw-gateway` của dự án, không đụng `openclaw-bot`, `9router-bot`. Chưa ai chạy quy trình này; mọi chỗ ghi "chưa kiểm chứng" ở cuối mục là điều cần quan sát khi làm lần đầu.
+Đăng nhập Codex (OAuth ChatGPT) của Gateway có hạn: `expiresAt` hiện là `1792943476465` (22:51 ngày 25/10/2026). Làm trước hạn này (mục tiêu 22/10/2026). Anh Khải tự chạy các bước dưới đây trong terminal Ubuntu (có TTY), đứng trong `~/apps/openclaw`; chỉ thao tác với `openclaw-gateway` của dự án, không đụng `openclaw-bot`, `9router-bot`. Quy trình đã chạy thật ngày 18/10/2026 (OpenClaw 2026.10.3); các điều đã và chưa kiểm chứng ghi ở cuối mục.
 
 **Bí mật:** mã thiết bị, URL chuyển hướng, token hiện trên màn hình là bí mật. Không dán, không chụp, không gửi cho ai (kể cả trợ lý lập trình), không ghi vào repo. Bản sao lưu bên dưới chứa thông tin xác thực: để ngoài repo, giữ quyền 700.
 
@@ -98,10 +98,13 @@ Rồi `docker compose up -d openclaw-gateway`. Digest đang dùng ghi trong bả
 
 Nguồn (docs.openclaw.ai, bản đang phát hành, chưa đối chiếu với 2026.10.3, tra ngày 18/10/2026): `/cli/models`, `/concepts/oauth`, `/providers/openai/setup`, `/install/docker`.
 
+Đã kiểm chứng (18/10/2026, OpenClaw 2026.10.3):
+
+- `docker compose exec openclaw-gateway node dist/index.js models auth login --provider openai --device-code` chạy được trong Docker, trực tiếp trong terminal, không cần `-it`; không dùng `--force`, `--profile-id`, `--set-default`.
+- Sau đăng nhập chỉ còn 1 hồ sơ OAuth; mô hình mặc định không đổi; `expiresAt` chuyển từ `1792943476465` sang `1793182040342` (khoảng 17:07 ngày 28/10/2026, `models status` ghi "expires in 10d"), tức hạn mỗi lần đăng nhập khoảng 10 ngày. `models status --check` thoát 0 (`status=usable`), `healthz` live, phiên mới trả lời bình thường.
+
 Chưa kiểm chứng:
 
-- Cờ `--device-code` có được bản 2026.10.3 nhận và chạy được trong Docker không; định dạng và thời hạn của mã thiết bị.
-- `docker compose exec` (thay vì `run --rm openclaw-cli`, từng bị `GatewayLockNamespaceError`) có chạy được lệnh đăng nhập không, và có cần `-it` không (đã ghi chạy trực tiếp trong terminal có TTY).
-- Đăng nhập khi Gateway đang chạy có ghi đè hồ sơ `openai` hiện có không (docs chỉ nói rõ cho `--force`).
-- Ý nghĩa của `expiresAt` (hạn access token hay hạn phiên OAuth), vì sao nó chưa đổi dù docs ghi runtime tự làm mới token, và ngưỡng "sắp hết hạn" của `models status --check`.
-- Cách hoàn tác ở bước 5.
+- OpenClaw có tự làm mới (refresh) trước hạn không, vì sao `expiresAt` không đổi trước khi đăng nhập lại; ý nghĩa của `expiresAt` (hạn access token hay hạn phiên OAuth). Theo dõi `expiresAt` trước 28/10/2026 và đăng nhập lại nếu còn dưới 3 ngày.
+- Ngưỡng "sắp hết hạn" của `models status --check`.
+- Cách hoàn tác ở bước 5 (chưa chạy thử).

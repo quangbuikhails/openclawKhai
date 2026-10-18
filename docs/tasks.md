@@ -49,9 +49,10 @@ _(chưa có)_
   - Kiểm chứng: chạy script khi Gateway đang chạy → toàn bộ ĐẠT; tắt Gateway rồi chạy lại → báo KHÔNG ĐẠT đúng bước; dán cả hai đầu ra.
   - Nợ từ G1-04: SPEC 7.3 (`healthz`, `channels status --probe`, `models status --check`) chưa chạy sau khi sửa `AGENTS.md`; chạy lần đầu bằng script này và ghi kết quả vào Ghi nhận G1-04.
 
-- [ ] **G1-07 Đăng nhập lại Codex trước hạn** _(anh Khải tự chạy; agent tra docs và ghi README)_ — hạn 22/10/2026 (token hết 22:51 ngày 25/10/2026).
+- [x] **G1-07 Đăng nhập lại Codex trước hạn** _(anh Khải tự chạy; agent tra docs và ghi README)_ — hạn 22/10/2026 (token hết 22:51 ngày 25/10/2026).
   - Làm: tra docs.openclaw.ai lệnh đăng nhập lại (chưa kiểm chứng `--device-code` trong Docker; không dùng `--force` khi chưa rõ); ghi mục "Đăng nhập lại Codex" vào `deploy/README.md`.
   - Kiểm chứng: sau khi đăng nhập lại, `models status --json | grep -i expir` ra `expiresAt` mới; `healthz` live; "Chào em" trên phiên mới đạt.
+  - Ghi nhận: 18/10/2026; OpenClaw 2026.10.3. Đã sao lưu `~/.openclaw` sang `~/.openclaw.truoc-dangnhap` (160M, quyền 700, ngoài repo) khi Gateway dừng, bật lại, rồi chạy `docker compose exec openclaw-gateway node dist/index.js models auth login --provider openai --device-code` trực tiếp trong terminal: thành công, không dùng `--force`, `--profile-id`, `--set-default`. Kết quả: `expiresAt` 1792943476465 → 1793182040342 (khoảng 17:07 ngày 28/10/2026, "expires in 10d"); `models status --check` thoát 0, `status=usable`; `healthz` live; "Chào em" trên phiên mới đạt; sau đăng nhập chỉ còn 1 hồ sơ OAuth, mô hình mặc định `openai/gpt-6-astra` không đổi. Chu kỳ hạn khoảng 10 ngày; chưa kiểm chứng OpenClaw có tự refresh trước hạn không (theo dõi `expiresAt` trước 28/10; G1-06 cảnh báo khi còn dưới 3 ngày). Bản sao lưu chứa bí mật, giữ ngoài repo.
 
 ## Gói 2 — Ra lệnh, công việc, lịch hẹn, nhắc nhở
 
