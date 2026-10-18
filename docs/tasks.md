@@ -14,9 +14,10 @@ _(chưa có)_
   - Làm: bật WSL2 + Ubuntu (`wsl --install`); cài Docker Desktop, bật WSL Integration cho Ubuntu; cài Git trong Ubuntu; đặt máy không tự ngủ khi cắm điện. Tạo lịch Google "Công việc" và bảng tính trống "Khải Phiên Bản Số – Biểu theo dõi". Chuẩn bị tài khoản Zalo phụ (cho Gói 3).
   - Kiểm chứng: trong Ubuntu, `docker --version`, `docker compose version`, `git --version` đều chạy; `docker run --rm hello-world` thành công.
 
-- [ ] **G1-01 Khởi tạo repo**
+- [x] **G1-01 Khởi tạo repo**
   - Làm: đặt repo tại `~/projects/khai-phien-ban-so`; `git init`; tạo `.gitignore` (đã có mẫu); commit các tệp `AGENTS.md`, `CLAUDE.md`, `docs/`.
   - Kiểm chứng: `git status` sạch; `git check-ignore .env secrets/x tmp/x` trả về cả ba đường dẫn.
+  - Ghi nhận: 18/10/2026; kiểm chứng đạt: `git status -sb` sạch (nhánh main); `git check-ignore .env secrets/x tmp/x` trả về cả ba đường dẫn. Repo đã khởi tạo từ trước, task đánh dấu bù.
 
 - [x] **G1-02 Cài OpenClaw bằng Docker và đăng nhập Codex** _(anh Khải tự chạy; agent chỉ hướng dẫn và đọc log)_
   - Làm: theo hướng dẫn cài đặt đã có; OpenClaw nằm ở `~/apps/openclaw`.
