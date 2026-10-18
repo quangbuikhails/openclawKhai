@@ -68,6 +68,8 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 | C15 | Giới hạn thư mục trợ lý được đọc, gửi tệp (`tools.fs.workspaceOnly`) | 2B | Mặc định `false`: trợ lý gửi được mọi tệp nó đọc được. Đề xuất: `true` để chỉ gửi tệp trong workspace và thư mục tạm |
 | C16 | Cách mở web app từ điện thoại | 4 | Phương án: (a) mạng riêng ảo Tailscale giữa máy chạy trợ lý và điện thoại, không mở cổng nào ra Internet (đề xuất); (b) đường hầm Cloudflare Tunnel kèm lớp đăng nhập Cloudflare Access; (c) mở cổng trên router: không dùng. Chi tiết, chi phí cần kiểm chứng khi làm |
 | C17 | Đọc tệp Word, PDF scan trong OpenClaw: dùng khả năng đọc tệp sẵn có hay script chuyển đổi riêng | 2C | Cần khảo sát ở G2C-01; bot Zalo mặc định nhận tệp ≤ 5 MB |
+| C18 | Xử lý `functions.exec`/`functions.wait` của trợ lý (không loại được bằng `deny`, `profile`, `tools.allow`) | Trước G2-02 | Phương án: (a) thử `tools.exec.mode` = `ask`/`auto` rồi kiểm chứng; (b) nối kênh mà chấp nhận rủi ro, chỉ chủ ra lệnh, văn bản thông thường; (c) tra thêm sandbox OpenClaw khi Gateway chạy trong Docker. Đề xuất: (a) trước, không nối kênh khi chưa quyết |
+| C19 | Bot Zalo cũ (`openclaw-bot`) dùng bot Zalo nào; bot của dự án phải riêng, không dùng chung token | Trước G2-02 | Anh Khải xác định bot cũ dùng loại và token nào |
 
 ## 4. Biểu theo dõi công việc (đã chốt D14)
 

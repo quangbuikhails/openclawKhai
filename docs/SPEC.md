@@ -195,6 +195,7 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 | Trợ lý bị dẫn dắt bằng nội dung tin nhắn (prompt injection) | Ghi sai dữ liệu, tiết lộ thông tin | Chỉ nhận lệnh theo ID; xác nhận trước khi ghi; bộ câu thử mục 7 |
 | Máy tắt, mất điện, mất mạng | Không nhắc việc, không trả lời | Lịch trên Google Calendar vẫn báo; Gateway tự chạy lại; xét VPS (C7) |
 | OpenClaw đổi lệnh, cấu hình khi cập nhật | Hỏng cấu hình | Đối chiếu tài liệu, sao lưu trước khi cập nhật, ghi phiên bản vào `Ghi nhận` |
+| Trợ lý có công cụ chạy lệnh gốc của Codex không tắt được bằng cấu hình | Nếu bị dẫn dắt qua tin nhắn, có thể đọc, ghi trong container (gồm cấu hình OpenClaw) | Chưa nối kênh ngoài cho đến khi chốt C18; chỉ chủ ra lệnh; không đưa bí mật vào workspace |
 
 ## 7. Bộ kiểm thử hồi quy
 
