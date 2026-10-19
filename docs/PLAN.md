@@ -92,18 +92,20 @@ Bảng tính "Khải Phiên Bản Số – Biểu theo dõi", trang `bieu`. Tiê
 | 13 | Thời hạn yêu cầu trong văn bản | `doc_deadline` | dd/mm/yyyy | Trợ lý bóc tách |
 | 14 | Ngày nhắc việc | `remind_date` | dd/mm/yyyy | Tự động theo D15 |
 
-Công thức Ngày nhắc việc (dòng 2, Hạn hoàn thành ở cột H, Thời hạn trong văn bản ở cột M), để trên Sheets cũng tự tính khi anh sửa tay:
+Công thức Ngày nhắc việc: một công thức mảng đặt ở `N2` (Hạn hoàn thành ở cột H, Thời hạn trong văn bản ở cột M), tự tính cho mọi dòng, kể cả khi anh sửa tay hoặc thêm dòng. Máy chủ MCP không bao giờ ghi vào cột N:
 
 ```
-=IF(AND(H2="",M2=""),"",LET(h,IF(H2<>"",H2,M2),r,h-3,IF(WEEKDAY(r,2)=6,r-1,IF(WEEKDAY(r,2)=7,r-2,r))))
+=ARRAYFORMULA(IF((H2:H="")*(M2:M=""),"",LET(r,IF(H2:H<>"",H2:H,M2:M)-3,IF(WEEKDAY(r,2)=6,r-1,IF(WEEKDAY(r,2)=7,r-2,r)))))
 ```
 
-Trang `log` (Truy vết): `time`, `channel` (`zalo` / `telegram` / `web` / `tay`), `action` (`them` / `sua` / `doi_trang_thai` / `doi_han` / `huy`), `stt`, `summary`.
+Chưa kiểm chứng `LET` bên trong `ARRAYFORMULA` trên Sheets; nếu không chạy thì thử `MAP`/`BYROW`, phương án cuối là máy chủ ghi công thức theo từng dòng (G2-04). Bảng tính đặt ngôn ngữ Việt Nam, múi giờ `Asia/Ho_Chi_Minh`.
+
+Trang `log` (Truy vết): `time`, `channel` (`zalo` / `telegram` / `web` / `ui`; `ui` là Control UI của OpenClaw), `action` (`them` / `sua` / `doi_trang_thai` / `doi_han` / `huy`), `stt`, `summary`.
 
 Quy ước:
 - Không xóa dòng; việc bỏ chuyển `Hủy`.
 - `status`, `priority` dùng danh sách thả xuống.
-- Định dạng: tô đỏ nhạt khi quá Hạn hoàn thành mà chưa `Đã xong`/`Hủy`; tô vàng nhạt khi hôm nay ≥ Ngày nhắc việc.
+- Định dạng: tô đỏ nhạt khi quá Hạn hoàn thành mà chưa `Đã xong`/`Hủy`; tô vàng nhạt khi hôm nay ≥ Ngày nhắc việc mà chưa `Đã xong`/`Hủy`. Anh sửa tay trên Sheets thì không có dòng `log` (ghi vào "Phát sinh" để Gói 4 xét).
 - Việc không có văn bản (giao miệng, tự đặt) vẫn ghi vào biểu, các cột 3–5, 12, 13 để trống.
 
 **Google Drive (Gói 2C):** thư mục riêng "Khải Phiên Bản Số/Văn bản đến/<năm>/<tháng>", không chia sẻ cho ai. Tên tệp: `<yyyy-mm-dd>_<số ký hiệu, thay / bằng ->_<trích yếu rút gọn>.<đuôi gốc>`. Nhiều ảnh của một văn bản: ghép thành một tệp PDF nếu làm được, không thì để chung một thư mục con.

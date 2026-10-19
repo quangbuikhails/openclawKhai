@@ -52,11 +52,11 @@ Một trợ lý AI cá nhân giúp anh Khải:
 **Công việc (Google Sheets – biểu theo dõi)**
 - Dữ liệu lưu trên biểu theo dõi 14 cột (PLAN.md mục 4): STT, Ngày nhận, Tên văn bản, Số ký hiệu, Cơ quan ban hành, Nội dung cần xử lý, Người phụ trách, Hạn hoàn thành, Ưu tiên, Trạng thái, Ghi chú, Link tài liệu, Thời hạn yêu cầu trong văn bản, Ngày nhắc việc. Việc không có văn bản (giao miệng, tự đặt) cũng ghi vào biểu, để trống các cột văn bản.
 - Người phụ trách mặc định là anh Khải. Trạng thái: Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong, Hủy.
-- Thêm việc bằng câu tự nhiên, ví dụ: "Thứ Sáu nộp dự thảo báo cáo thẩm tra" → tạo việc có hạn là thứ Sáu gần nhất.
-- Trước khi ghi: nhắc lại tiêu đề, hạn và chờ chủ xác nhận rồi mới ghi (đã chốt D23; ổn định thì xét lại).
+- Thêm việc bằng câu tự nhiên, ví dụ: "Thứ Sáu nộp dự thảo báo cáo thẩm tra" → tạo việc có hạn là thứ Sáu sắp tới; nếu hôm nay đúng là thứ được nói thì hỏi lại "hôm nay hay tuần sau". Hạn đã qua vẫn thêm được, kèm cảnh báo.
+- Trước khi ghi: nhắc lại tiêu đề, hạn và chờ chủ xác nhận rồi mới ghi (đã chốt D23; ổn định thì xét lại). Lời nhắc chỉ nêu hạn; ghi xong, trợ lý đọc lại cột Ngày nhắc việc và báo ngày nhắc.
 - Xem việc: hôm nay, tuần này, quá hạn, tất cả chưa xong.
 - Cập nhật: đánh dấu xong, đổi hạn, ghi chú thêm. Không xóa dòng; việc bỏ thì chuyển trạng thái "Hủy".
-- Chủ sửa trực tiếp trên Sheets: trợ lý làm việc theo dữ liệu mới.
+- Chủ sửa trực tiếp trên Sheets: trợ lý làm việc theo dữ liệu mới. Sửa tay không để lại dòng `log`.
 - Khi câu lệnh không rõ hạn hoặc không rõ việc nào: hỏi lại, không đoán.
 
 **Lịch hẹn (Google Calendar)**
@@ -141,7 +141,7 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 - **Biểu theo dõi:** bảng 14 cột như trên Google Sheets; lọc theo trạng thái, ưu tiên, hạn; tô màu việc quá hạn, sắp đến hạn; mở được tệp gốc trên Drive.
 - **Lịch công việc:** lịch tháng, tuần lấy từ chính biểu theo dõi (Ngày nhắc việc, Hạn hoàn thành) cùng lịch hẹn trên Google Calendar; cập nhật ngay khi biểu thay đổi.
 - **Kanban:** bốn cột Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong (Hủy ẩn); kéo thẻ sang cột khác thì trạng thái trên biểu đổi theo, lịch và lời nhắc cập nhật theo; trợ lý cập nhật qua chat thì thẻ tự chuyển cột.
-- **Một nguồn dữ liệu:** biểu theo dõi trên Google Sheets là nguồn gốc; web app, lịch, Kanban và trợ lý cùng đọc, ghi vào đó; mỗi thay đổi có dòng truy vết ở trang `log`.
+- **Một nguồn dữ liệu:** biểu theo dõi trên Google Sheets là nguồn gốc; web app, lịch, Kanban và trợ lý cùng đọc, ghi vào đó; mỗi thay đổi qua trợ lý hoặc web app có dòng truy vết ở trang `log` (sửa tay trên Sheets thì không).
 - **Xem trên điện thoại:** chủ mở được web app trên điện thoại. Không mở cổng ra Internet công cộng; cách truy cập từ xa chốt ở C16 (PLAN.md).
 - Quản lý kết nối các kênh (màn 3 của bản thiết kế): Zalo cá nhân (tài khoản phụ, quét QR), bot Telegram (kết nối bằng token, chỉ chủ được nhắn); xem trạng thái, kiểm tra kết nối, đổi token, ngắt kết nối. Token nhập trên máy chạy agent, không hiển thị lại trên giao diện.
 - Xem tình trạng các kênh; xem việc và lịch; quản lý skill; quản lý danh sách cho phép; xử lý hàng chờ duyệt.
@@ -231,20 +231,20 @@ Dùng cho nghiệm thu Gói 1 (câu làm được trên Control UI) và Gói 3 (
 
 | # | Skill | Thao tác | Kỳ vọng |
 |---|---|---|---|
-| CV1 | Công việc | "Thêm việc: [TEST] … hạn thứ Sáu" rồi xác nhận | Nhắc lại đúng ngày; có dòng ở `tasks` và `log` |
-| CV2 | Công việc | Như CV1 nhưng từ chối | Bảng tính không đổi |
-| CV3 | Công việc | Thêm việc không nói hạn | Hỏi lại hạn, không đoán |
-| CV4 | Công việc | "Còn việc gì?" | Khớp bảng tính, quá hạn lên đầu |
-| CV5 | Công việc | Đánh dấu xong một việc [TEST] | `status` = Xong, có dòng `log` |
-| CV6 | Công việc | Sửa tay một dòng trên Sheets rồi hỏi lại | Trả lời theo dữ liệu mới |
-| CV7 | Công việc | Thêm qua Telegram, xem qua Zalo | Hai kênh cùng dữ liệu |
+| CV1 | Công việc | "Thêm việc: [TEST] … hạn thứ Sáu" rồi xác nhận | Nhắc lại đúng ngày (thứ Sáu sắp tới; hôm nay là thứ Sáu thì hỏi lại "hôm nay hay tuần sau"); có dòng ở `bieu` và dòng `log` (`action`=`them`, `channel` đúng kênh) |
+| CV2 | Công việc | Như CV1 nhưng từ chối | Bảng tính không đổi, không có dòng `log` |
+| CV3 | Công việc | Thêm việc không nói hạn | Hỏi lại hạn, không đoán; chủ trả lời "chưa có hạn" thì ghi trống Hạn hoàn thành và Ngày nhắc việc |
+| CV4 | Công việc | "Còn việc gì?" (có sẵn một việc [TEST] hạn đã qua) | Khớp bảng tính; chỉ liệt kê việc không phải `Đã xong`, `Hủy`; việc quá hạn (Hạn hoàn thành < hôm nay) lên đầu |
+| CV5 | Công việc | Đánh dấu xong một việc [TEST] | `status` = `Đã xong`, có dòng `log` (`action`=`doi_trang_thai`) |
+| CV6 | Công việc | Chủ sửa tay Hạn hoặc Trạng thái của một dòng trên Sheets rồi hỏi lại | Trả lời theo dữ liệu mới; Ngày nhắc việc tự tính lại; không có dòng `log` cho lần sửa tay |
+| CV7 | Công việc | Thêm qua Telegram, xem qua Zalo | Hai kênh cùng dữ liệu. Kiểm chứng ở G2-07 (G2-02, G2-03 còn bị C18, C19 chặn) |
 | LH1 | Lịch hẹn | Đặt lịch [TEST] rồi xác nhận | Sự kiện đúng giờ trên lịch "Công việc"; điện thoại báo theo C4 |
 | LH2 | Lịch hẹn | Đặt lịch [TEST] trùng giờ | Cảnh báo trùng trước khi tạo |
 | LH3 | Lịch hẹn | Dời, hủy lịch [TEST] | Hỏi xác nhận rồi mới làm |
 | LH4 | Lịch hẹn | "Mai có lịch gì?" | Khớp lịch "Công việc" |
 | NV1 | Nhắc việc | Việc thử chạy một lần sau 2 phút | Tin đến kênh của chủ đúng giờ |
-| NV2 | Nhắc việc | Việc [TEST] có Hạn hoàn thành rơi vào thứ Hai | Ngày nhắc việc là thứ Sáu tuần trước (hạn − 3 ngày là thứ Sáu); hạn thứ Ba → nhắc thứ Sáu (vì hạn − 3 là thứ Bảy) |
-| NV3 | Nhắc việc | Việc [TEST] chỉ có Thời hạn trong văn bản | Ngày nhắc tính theo thời hạn trong văn bản |
+| NV2 | Nhắc việc | Việc [TEST] có Hạn hoàn thành lần lượt rơi vào từng thứ trong tuần | Cột Ngày nhắc việc = hạn − 3 ngày, rơi thứ Bảy hoặc Chủ nhật thì lùi về thứ Sáu: hạn thứ Hai → thứ Sáu tuần trước; thứ Ba (hạn − 3 là thứ Bảy) → thứ Sáu; thứ Tư (hạn − 3 là Chủ nhật) → thứ Sáu; thứ Năm → thứ Hai; thứ Sáu → thứ Ba; thứ Bảy → thứ Tư; Chủ nhật → thứ Năm. Ví dụ hạn 26/10/2026 (thứ Hai), 27/10, 28/10 đều nhắc 23/10/2026. Task G2-04 chỉ kiểm giá trị cột; tin nhắc đến kênh kiểm ở G2-06 |
+| NV3 | Nhắc việc | Việc [TEST] chỉ có Thời hạn trong văn bản; thêm việc [TEST] có cả hai loại hạn | Chỉ có Thời hạn trong văn bản: Ngày nhắc tính theo đó. Có cả hai: tính theo Hạn hoàn thành |
 | TV1 | Tiếp nhận (2C) | Gửi ảnh văn bản thông thường [TEST] | Dòng đề xuất đúng các trường bóc tách |
 | TV2 | Tiếp nhận (2C) | Gửi PDF scan và tệp Word | Bóc tách được; trường không chắc có "(cần kiểm tra)" |
 | TV3 | Tiếp nhận (2C) | Từ chối ở bước xác nhận | Biểu, Drive, Calendar không đổi |
