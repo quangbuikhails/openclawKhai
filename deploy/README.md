@@ -108,3 +108,39 @@ Chưa kiểm chứng:
 - OpenClaw có tự làm mới (refresh) trước hạn không, vì sao `expiresAt` không đổi trước khi đăng nhập lại; ý nghĩa của `expiresAt` (hạn access token hay hạn phiên OAuth). Theo dõi `expiresAt` trước 28/10/2026 và đăng nhập lại nếu còn dưới 3 ngày.
 - Ngưỡng "sắp hết hạn" của `models status --check`.
 - Cách hoàn tác ở bước 5 (chưa chạy thử).
+
+## MCP Google (G2-01B, spike)
+
+Server MCP nhỏ (`mcp-google/server.mjs`) chạy ở container riêng `khai-mcp-google`, dùng lại image OpenClaw đang ghim digest (Node và SDK MCP có sẵn trong `/app/node_modules`, không thêm package). HTTP trong mạng `khai-pbs_default`, không publish cổng. Chỉ thao tác đúng một bảng tính và một lịch `[TEST]` theo ID trong `secrets/mcp-google.env`. Công cụ xóa chỉ chạy khi ô A / tiêu đề bắt đầu `[TEST]`; luật này chỉ cho bảng thử, Gói 2 phải quyết luật riêng cho bảng thật.
+
+Anh Khải tự làm (không dán khóa, token vào chat hay repo):
+
+1. Tạo `secrets/google-sa.json` (khóa Service Account) và `secrets/mcp-google.env` theo mẫu cuối `deploy/.env.example`. Container chạy user 1000:1000: `chmod 600` đủ nếu uid máy là 1000 (`id -u`).
+2. Xem trước cấu hình ghép, không khởi động gì:
+
+   ```bash
+   cd ~/apps/openclaw
+   docker compose -f docker-compose.yml -f ~/projects/khai-phien-ban-so/deploy/docker-compose.mcp-google.yml config
+   ```
+
+   Kiểm tra: dịch vụ `khai-mcp-google` không có `ports`, đúng hai mount `:ro`, `env_file` đã giải đường dẫn.
+3. Khởi động chỉ dịch vụ này, không đụng Gateway:
+
+   ```bash
+   docker compose -f docker-compose.yml -f ~/projects/khai-phien-ban-so/deploy/docker-compose.mcp-google.yml up -d --no-deps khai-mcp-google
+   docker logs khai-mcp-google
+   ```
+
+4. Đăng ký vào OpenClaw (token ghi thẳng vào `openclaw.json` bằng `mcp set`, không dùng `${...}`, không sửa môi trường Gateway). Khóa và cú pháp `mcp set`, `toolFilter` đối chiếu `/cli/mcp/registry` trước khi chạy (chưa kiểm chứng). Quy trình đổi cấu hình:
+
+   1. Sao lưu, không dừng Gateway: `cp -p ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.truoc-nhom11`
+   2. `mcp set … --dry-run`, đọc kết quả
+   3. Áp dụng `mcp set …`
+   4. `config validate`
+   5. `curl -fsS http://127.0.0.1:28789/healthz`
+   6. Mở phiên mới (dấu + cạnh PHIÊN)
+   7. Kiểm `expiresAt` của Codex (`models status`) còn nguyên
+
+   Lấy tên công cụ thực tế bằng `mcp probe` hoặc `mcp doctor <tên> --probe`.
+
+Hoàn tác: `mcp unset <tên>` (hoặc chép lại `openclaw.json.truoc-nhom11`), rồi `docker compose -f … -f … rm -sf khai-mcp-google`; xóa `secrets/mcp-google.env`, `secrets/google-sa.json` và thu hồi khóa trong Google Cloud. Không xóa volume.

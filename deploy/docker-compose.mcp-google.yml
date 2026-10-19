@@ -1,0 +1,29 @@
+# Compose override cho server MCP Google (G2-01B, PLAN.md D21). Ghép với ~/apps/openclaw/docker-compose.yml.
+# Dùng đường dẫn tuyệt đối theo $HOME vì đường dẫn tương đối tính từ thư mục của tệp -f đầu tiên.
+# Dịch vụ cùng dự án khai-pbs nên tự vào mạng khai-pbs_default; KHÔNG có `ports:` (không publish ra host).
+services:
+  khai-mcp-google:
+    image: ${OPENCLAW_IMAGE:?đặt OPENCLAW_IMAGE trong ~/apps/openclaw/.env}
+    container_name: khai-mcp-google
+    entrypoint: ["node", "/app/mcp-google/server.mjs"]
+    user: "1000:1000"
+    restart: "no"
+    env_file:
+      - ${HOME}/projects/khai-phien-ban-so/secrets/mcp-google.env
+    volumes:
+      # Mount vào trong /app để ESM tìm được /app/node_modules (không dùng NODE_PATH).
+      - ${HOME}/projects/khai-phien-ban-so/mcp-google:/app/mcp-google:ro
+      - ${HOME}/projects/khai-phien-ban-so/secrets/google-sa.json:/run/secrets/google-sa.json:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
