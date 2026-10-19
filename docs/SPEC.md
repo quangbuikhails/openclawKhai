@@ -13,7 +13,7 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - (giai đoạn sau) trả lời tin nhắn Zalo của một nhóm người được chọn, có cơ chế duyệt;
 - quản lý trên web app: biểu theo dõi, lịch công việc và bảng Kanban, ba cách xem cùng một dữ liệu, xem được trên điện thoại.
 
-**Chỉ số đo kết quả** `[CẦN CHỐT]` (C11) — đo trong 4 tuần dùng thật sau khi nghiệm thu Gói 2:
+**Chỉ số đo kết quả** (đã chốt D24, 19/10/2026) — đo trong 4 tuần dùng thật sau khi nghiệm thu Gói 2:
 - Không có việc nào có hạn bị quá hạn mà chưa được nhắc trước ít nhất 1 ngày.
 - Thêm một việc qua Zalo, từ lúc nhắn đến lúc lưu xong, dưới 30 giây.
 
@@ -47,13 +47,13 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - Telegram: kênh dự phòng; được dùng như bot Zalo, kể cả gửi văn bản thông thường để tiếp nhận (chủ đã chốt ngày 14/10/2026, chấp nhận việc Telegram không mã hóa đầu cuối). Văn bản mật không gửi qua kênh nào.
 - Cả hai kênh dùng chung một trợ lý và chung dữ liệu.
 - Chỉ tài khoản của chủ ra lệnh được (danh sách cho phép theo ID tài khoản, không theo lời tự xưng).
-- Trợ lý gửi chủ động được tới chủ (nhắc việc, bản tin). `[CẦN CHỐT]` Telegram gửi song song hay chỉ khi bot Zalo lỗi (C4).
+- Trợ lý gửi chủ động được tới chủ (nhắc việc, bản tin). Telegram chỉ nhận tin chủ động khi bot Zalo gửi lỗi, không gửi song song (đã chốt D22).
 
 **Công việc (Google Sheets – biểu theo dõi)**
 - Dữ liệu lưu trên biểu theo dõi 14 cột (PLAN.md mục 4): STT, Ngày nhận, Tên văn bản, Số ký hiệu, Cơ quan ban hành, Nội dung cần xử lý, Người phụ trách, Hạn hoàn thành, Ưu tiên, Trạng thái, Ghi chú, Link tài liệu, Thời hạn yêu cầu trong văn bản, Ngày nhắc việc. Việc không có văn bản (giao miệng, tự đặt) cũng ghi vào biểu, để trống các cột văn bản.
 - Người phụ trách mặc định là anh Khải. Trạng thái: Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong, Hủy.
 - Thêm việc bằng câu tự nhiên, ví dụ: "Thứ Sáu nộp dự thảo báo cáo thẩm tra" → tạo việc có hạn là thứ Sáu gần nhất.
-- Trước khi ghi: nhắc lại tiêu đề, hạn. `[CẦN CHỐT]` chờ chủ xác nhận rồi mới ghi, hay ghi ngay kèm lệnh hoàn tác (C8).
+- Trước khi ghi: nhắc lại tiêu đề, hạn và chờ chủ xác nhận rồi mới ghi (đã chốt D23; ổn định thì xét lại).
 - Xem việc: hôm nay, tuần này, quá hạn, tất cả chưa xong.
 - Cập nhật: đánh dấu xong, đổi hạn, ghi chú thêm. Không xóa dòng; việc bỏ thì chuyển trạng thái "Hủy".
 - Chủ sửa trực tiếp trên Sheets: trợ lý làm việc theo dữ liệu mới.
@@ -69,10 +69,9 @@ Một trợ lý AI cá nhân giúp anh Khải:
 **Nhắc nhở**
 - **Nhắc hạn công việc:** Ngày nhắc việc = Hạn hoàn thành trừ 3 ngày; nếu Hạn hoàn thành trống thì tính theo Thời hạn yêu cầu trong văn bản. Ngày nhắc rơi vào thứ Bảy hoặc Chủ nhật thì nhắc vào thứ Sáu liền trước. Đến ngày nhắc, trợ lý nhắn chủ qua Zalo hoặc Telegram, web app hiện cảnh báo.
 - **Đẩy sang Google Calendar:** mỗi việc có hạn tạo hai sự kiện cả ngày trên lịch "Công việc": "[Nhắc] …" vào Ngày nhắc việc và "[Hạn] …" vào Hạn hoàn thành, để điện thoại vẫn báo khi máy chạy trợ lý tắt. Đổi hạn, đổi trạng thái Đã xong hoặc Hủy thì cập nhật hoặc gỡ hai sự kiện này.
-- Nhắc trước giờ hẹn. `[CẦN CHỐT]` nhắc trước bao lâu.
-- Bản tin đầu ngày: lịch hôm nay + việc đến hạn + việc quá hạn. `[CẦN CHỐT]` giờ gửi, có gửi thứ Bảy/Chủ nhật không.
-- Nhắc việc quá hạn. `[CẦN CHỐT]` tần suất.
-- Tổng kết tuần (việc đã xong, việc còn lại, lịch tuần sau). `[CẦN CHỐT]` có làm không, giờ gửi.
+- Nhắc trước giờ hẹn 30 phút.
+- Bản tin đầu ngày gửi 07:30 thứ Hai đến thứ Sáu, không gửi thứ Bảy, Chủ nhật: lịch hôm nay + việc đến hạn + việc quá hạn (việc quá hạn gộp vào bản tin, không gửi riêng).
+- Không có tổng kết tuần (đã chốt D22).
 - Không đọc được dữ liệu Google: báo lỗi cho chủ, không gửi bản tin rỗng.
 
 **Nghiệm thu**

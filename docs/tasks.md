@@ -60,7 +60,7 @@ _(chưa có)_
 
 ## Gói 2 — Ra lệnh, công việc, lịch hẹn, nhắc nhở
 
-> Trước khi bắt đầu: chốt C1, C2, C4, C8, C11 trong PLAN.md (C3 đã chốt thành D14).
+> Đã chốt: C1 (D21), C3 (D14), C4 (D22), C8 (D23), C11 (D24). C2 chốt tạm, chờ kiểm chứng chuông nhắc (gộp vào G2-05).
 > Task nào sửa skill: chạy lại phần tương ứng của bộ kiểm thử hồi quy (SPEC mục 7) trước khi báo xong.
 > Bản nháp skill `cong-viec`, `lich-hen`, `nhac-viec` trong `ban-nhap/skills/` là đầu vào khi lập chi tiết G2-04 → G2-06.
 
