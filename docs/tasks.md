@@ -10,9 +10,10 @@ _(chưa có)_
 
 ## Gói 1 — Hạ tầng
 
-- [ ] **G1-00 Chuẩn bị máy và tài khoản** _(anh Khải tự làm)_
+- [x] **G1-00 Chuẩn bị máy và tài khoản** _(anh Khải tự làm)_
   - Làm: bật WSL2 + Ubuntu (`wsl --install`); cài Docker Desktop, bật WSL Integration cho Ubuntu; cài Git trong Ubuntu; đặt máy không tự ngủ khi cắm điện. Tạo lịch Google "Công việc" và bảng tính trống "Khải Phiên Bản Số – Biểu theo dõi". Chuẩn bị tài khoản Zalo phụ (cho Gói 3).
   - Kiểm chứng: trong Ubuntu, `docker --version`, `docker compose version`, `git --version` đều chạy; `docker run --rm hello-world` thành công.
+  - Ghi nhận: 19/10/2026; anh Khải tự làm: máy không tự ngủ khi cắm điện, lịch Google "Công việc", bảng tính "Khải Phiên Bản Số – Biểu theo dõi" đã tạo; tài khoản Zalo phụ để Gói 3 (chưa chuẩn bị). Kiểm chứng đạt: Docker 29.6.1, Docker Compose v5.1.4, Git 2.53.0, `docker run --rm hello-world` thành công.
 
 - [x] **G1-01 Khởi tạo repo**
   - Làm: đặt repo tại `~/projects/khai-phien-ban-so`; `git init`; tạo `.gitignore` (đã có mẫu); commit các tệp `AGENTS.md`, `CLAUDE.md`, `docs/`.
