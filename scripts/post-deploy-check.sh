@@ -20,7 +20,7 @@ warn_count=0
 
 # Chạy lệnh OpenClaw, gán đầu ra vào OC_OUT và mã thoát vào OC_RC. Lỗi chuẩn (stderr) bị bỏ.
 oc() {
-  OC_OUT="$(cd "$dir" && timeout 60 docker compose exec -T openclaw-gateway node dist/index.js "$@" 2>/dev/null)"
+  OC_OUT="$(cd "$dir" && timeout 60 docker compose exec -T openclaw-gateway node dist/index.js "$@" 2>/dev/null </dev/null)"
   OC_RC=$?
 }
 
