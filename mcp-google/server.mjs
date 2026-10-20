@@ -10,6 +10,11 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 
 const TEST_PREFIX = "[TEST]";
+const CAL_OWNER = "khai-pbs"; // dấu extendedProperties.private.owner trên mọi sự kiện server tạo (PLAN.md D25)
+const LH_LABEL = "[LH]";
+const CAL_TZ = "Asia/Ho_Chi_Minh";
+const DEFAULT_TIMED_REMINDER = 30;
+const MAX_EVENT_MS = 24 * 3600000;
 const SHEET_TAB = "bieu";
 const LOG_TAB = "log";
 const MAX_ROW = 5000;
@@ -140,13 +145,27 @@ const nowSerial = () => (Date.now() + 7 * 3600000) / DAY_MS + 25569; // serial k
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd").refine(isRealDate, "ngày không tồn tại");
 const eventId = z.string().regex(/^[a-v0-9]{5,1024}$/);
 const title = z.string().min(1).max(200);
+const localDateTime = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "yyyy-mm-ddThh:mm")
+  .refine((v) => isRealDate(v.slice(0, 10)) && Number(v.slice(11, 13)) < 24 && Number(v.slice(14, 16)) < 60, "ngày giờ không hợp lệ");
+const reminderMinutes = z.number().int().min(0).max(40320);
 const stt = z.number().int().min(1).max(100000);
 const channel = z.enum(CHANNELS).describe("Kênh chủ đang nhắn: ui (Control UI), zalo, telegram, web");
 const shortText = (max) => z.string().max(max);
 
 const ok = (data) => ({ content: [{ type: "text", text: JSON.stringify(data) }] });
 const fail = (message) => ({ isError: true, content: [{ type: "text", text: message }] });
-const summarize = (e) => ({ id: e.id, summary: e.summary, start: e.start?.date ?? e.start?.dateTime, end: e.end?.date ?? e.end?.dateTime });
+// Chỉ lấy id, tiêu đề, giờ, by_assistant; không bao giờ đưa mô tả, địa điểm, người tham dự ra cho mô hình (D25).
+const EVENT_FIELDS = "id,summary,status,start,end,extendedProperties/private/owner";
+const byAssistant = (e) => e.extendedProperties?.private?.owner === CAL_OWNER;
+const calEvent = (e) => ({
+  id: e.id,
+  summary: e.summary,
+  start: e.start?.date ?? e.start?.dateTime,
+  end: e.end?.date ?? e.end?.dateTime,
+  by_assistant: byAssistant(e),
+});
 
 // ---- Biểu theo dõi ----
 const enc = encodeURIComponent;
@@ -253,7 +272,7 @@ async function startupChecks() {
 }
 
 function buildServer() {
-  const server = new McpServer({ name: "khai-mcp-google", version: "0.2.0" });
+  const server = new McpServer({ name: "khai-mcp-google", version: "0.3.0" });
 
   // Mỗi công cụ ghi log tên và kết quả, không ghi nội dung dữ liệu.
   const tool = (name, description, inputSchema, handler) =>
@@ -385,65 +404,158 @@ function buildServer() {
       }),
   );
 
-  // ---- Lịch. Chế độ prod: chỉ đọc; luật ghi, xóa trên lịch thật do G2-05, G2-06 quyết. ----
-  const calWriteBlocked = () => (CAL_MODE === "prod" ? "Từ chối: lịch thật chưa mở quyền ghi (chờ G2-05, G2-06)" : null);
+  // ---- Lịch (D25). Chỉ sửa, xóa sự kiện có dấu owner do server gắn; sự kiện chủ tự tạo chỉ đọc. ----
+  const vnOffset = (local) => `${local}:00+07:00`;
+  const localMs = (local) => Date.parse(vnOffset(local));
+  const stripLabel = (t) => (t.startsWith(`${LH_LABEL} `) ? t.slice(LH_LABEL.length + 1) : t);
+  const testTitleError = (t) =>
+    CAL_MODE === "test" && !t.startsWith(TEST_PREFIX) ? `Từ chối: lịch đang ở chế độ test, tiêu đề phải bắt đầu ${TEST_PREFIX}` : null;
+  const remindersOf = (minutes) => ({ useDefault: false, overrides: [{ method: "popup", minutes }] });
+
+  // Đọc sự kiện trước khi ghi; trả lỗi nếu không có hoặc không phải do trợ lý tạo.
+  async function ownedEvent(event_id) {
+    let ev;
+    try {
+      ev = await google("GET", `${CAL}/${event_id}?fields=${EVENT_FIELDS}`);
+    } catch {
+      return { error: "Không đọc được sự kiện này (không có hoặc đã xóa)" };
+    }
+    if (ev.status === "cancelled") return { error: "Sự kiện đã bị hủy" };
+    if (!byAssistant(ev)) return { error: "Từ chối: sự kiện này không do trợ lý tạo, trợ lý chỉ được xem" };
+    return { ev };
+  }
+
+  // Chỉ tính sự kiện có giờ; sự kiện cả ngày không tính là trùng.
+  async function findConflicts(startLocal, endLocal, excludeId) {
+    const q = new URLSearchParams({
+      timeMin: vnOffset(startLocal),
+      timeMax: vnOffset(endLocal),
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: "50",
+      fields: `items(${EVENT_FIELDS})`,
+    });
+    const data = await google("GET", `${CAL}?${q}`);
+    return (data.items ?? []).filter((e) => e.start?.dateTime && e.id !== excludeId && e.status !== "cancelled").map(calEvent);
+  }
+
+  const conflictResult = (events) =>
+    fail(JSON.stringify({ conflict: true, message: "Trùng giờ với sự kiện có giờ đã có; chỉ ghi khi chủ xác nhận lại (accept_conflict=true)", events }));
+
+  const timedRange = (start, end) => {
+    const ms = localMs(end) - localMs(start);
+    if (ms <= 0) return "Từ chối: giờ kết thúc phải sau giờ bắt đầu";
+    if (ms > MAX_EVENT_MS) return "Từ chối: sự kiện có giờ không dài quá 24 giờ";
+    return null;
+  };
 
   tool(
-    "cal_create_allday",
-    "Tạo sự kiện cả ngày trên lịch; có thể đặt nhắc trước (phút).",
-    { title, date: isoDate, reminder_minutes: z.number().int().min(0).max(40320).optional() },
-    async ({ title: summary, date, reminder_minutes }) => {
-      const blocked = calWriteBlocked();
-      if (blocked) return fail(blocked);
-      if (!summary.startsWith(TEST_PREFIX)) return fail(`Từ chối: tiêu đề không bắt đầu bằng ${TEST_PREFIX}`);
-      const body = { summary, start: { date }, end: { date: addDay(date) } };
-      if (reminder_minutes !== undefined) {
-        body.reminders = { useDefault: false, overrides: [{ method: "popup", minutes: reminder_minutes }] };
-      }
-      return ok(summarize(await google("POST", CAL, body)));
+    "cal_create",
+    `Tạo sự kiện trên lịch "Công việc". Có giờ: truyền start, end (yyyy-mm-ddThh:mm, giờ Việt Nam), tiêu đề tự thêm nhãn ${LH_LABEL}, nhắc trước mặc định ${DEFAULT_TIMED_REMINDER} phút. Cả ngày: truyền date. Trùng giờ với sự kiện có giờ khác thì từ chối và trả danh sách trùng; chỉ tạo khi chủ đã xác nhận lại và accept_conflict=true.`,
+    {
+      title,
+      start: localDateTime.optional(),
+      end: localDateTime.optional(),
+      date: isoDate.optional(),
+      reminder_minutes: reminderMinutes.optional(),
+      accept_conflict: z.boolean().optional(),
     },
+    async ({ title: rawTitle, start, end, date, reminder_minutes, accept_conflict }) =>
+      serialized(async () => {
+        const timed = start !== undefined || end !== undefined;
+        if (timed === (date !== undefined)) return fail("Truyền start và end (có giờ), hoặc chỉ date (cả ngày)");
+        if (timed && (start === undefined || end === undefined)) return fail("start và end phải đi cùng nhau");
+        const bare = stripLabel(rawTitle);
+        const titleError = testTitleError(bare);
+        if (titleError) return fail(titleError);
+        const body = { extendedProperties: { private: { owner: CAL_OWNER } } };
+        if (timed) {
+          const rangeError = timedRange(start, end);
+          if (rangeError) return fail(rangeError);
+          if (!accept_conflict) {
+            const conflicts = await findConflicts(start, end);
+            if (conflicts.length > 0) return conflictResult(conflicts);
+          }
+          Object.assign(body, {
+            summary: `${LH_LABEL} ${bare}`,
+            start: { dateTime: vnOffset(start), timeZone: CAL_TZ },
+            end: { dateTime: vnOffset(end), timeZone: CAL_TZ },
+            reminders: remindersOf(reminder_minutes ?? DEFAULT_TIMED_REMINDER),
+          });
+        } else {
+          Object.assign(body, { summary: bare, start: { date }, end: { date: addDay(date) } });
+          if (reminder_minutes !== undefined) body.reminders = remindersOf(reminder_minutes);
+        }
+        return ok(calEvent(await google("POST", `${CAL}?fields=${EVENT_FIELDS}`, body)));
+      }),
   );
 
-  tool("cal_list", "Liệt kê sự kiện lịch trong khoảng ngày (tối đa 50).", { from: isoDate, to: isoDate }, async ({ from, to }) => {
+  tool("cal_list", "Liệt kê sự kiện lịch trong khoảng ngày (tối đa 50): chỉ id, tiêu đề, giờ, by_assistant (true là sự kiện do trợ lý tạo, sửa được).", { from: isoDate, to: isoDate }, async ({ from, to }) => {
     const q = new URLSearchParams({
       timeMin: `${from}T00:00:00+07:00`,
       timeMax: `${addDay(to)}T00:00:00+07:00`,
       singleEvents: "true",
       orderBy: "startTime",
       maxResults: "50",
+      fields: `items(${EVENT_FIELDS})`,
     });
     const data = await google("GET", `${CAL}?${q}`);
-    return ok((data.items ?? []).map(summarize));
+    return ok((data.items ?? []).filter((e) => e.status !== "cancelled").map(calEvent));
   });
 
   tool(
     "cal_update",
-    "Sửa tiêu đề hoặc ngày của sự kiện cả ngày trên lịch.",
-    { event_id: eventId, title: title.optional(), date: isoDate.optional() },
-    async ({ event_id, title: summary, date }) => {
-      const blocked = calWriteBlocked();
-      if (blocked) return fail(blocked);
-      const body = {};
-      if (summary !== undefined) body.summary = summary;
-      if (date !== undefined) Object.assign(body, { start: { date }, end: { date: addDay(date) } });
-      if (Object.keys(body).length === 0) return fail("Không có gì để sửa");
-      if (CAL_MODE === "test") {
-        const old = await google("GET", `${CAL}/${event_id}`);
-        if (!(old.summary ?? "").startsWith(TEST_PREFIX)) return fail(`Từ chối: tiêu đề cũ không bắt đầu bằng ${TEST_PREFIX}`);
-        if (summary !== undefined && !summary.startsWith(TEST_PREFIX)) return fail(`Từ chối: tiêu đề mới không bắt đầu bằng ${TEST_PREFIX}`);
-      }
-      return ok(summarize(await google("PATCH", `${CAL}/${event_id}`, body)));
+    "Sửa sự kiện do trợ lý tạo: đổi tiêu đề, dời giờ (start và end, sự kiện có giờ) hoặc dời ngày (date, sự kiện cả ngày), đổi nhắc. Dời sang giờ trùng thì từ chối trừ khi accept_conflict=true. Sự kiện không do trợ lý tạo bị từ chối.",
+    {
+      event_id: eventId,
+      title: title.optional(),
+      start: localDateTime.optional(),
+      end: localDateTime.optional(),
+      date: isoDate.optional(),
+      reminder_minutes: reminderMinutes.optional(),
+      accept_conflict: z.boolean().optional(),
     },
+    async ({ event_id, title: rawTitle, start, end, date, reminder_minutes, accept_conflict }) =>
+      serialized(async () => {
+        if ((start === undefined) !== (end === undefined)) return fail("start và end phải đi cùng nhau");
+        if (start !== undefined && date !== undefined) return fail("Chỉ truyền start và end, hoặc date, không cả hai");
+        if ([rawTitle, start, date, reminder_minutes].every((v) => v === undefined)) return fail("Không có gì để sửa");
+        const { ev, error } = await ownedEvent(event_id);
+        if (error) return fail(error);
+        const isTimed = Boolean(ev.start?.dateTime);
+        if (isTimed && date !== undefined) return fail("Sự kiện này có giờ: dùng start và end, không dùng date");
+        if (!isTimed && start !== undefined) return fail("Sự kiện này cả ngày: dùng date, không dùng start và end");
+        const body = {};
+        if (rawTitle !== undefined) {
+          const bare = stripLabel(rawTitle);
+          const titleError = testTitleError(bare);
+          if (titleError) return fail(titleError);
+          body.summary = isTimed ? `${LH_LABEL} ${bare}` : bare;
+        }
+        if (start !== undefined) {
+          const rangeError = timedRange(start, end);
+          if (rangeError) return fail(rangeError);
+          if (!accept_conflict) {
+            const conflicts = await findConflicts(start, end, event_id);
+            if (conflicts.length > 0) return conflictResult(conflicts);
+          }
+          body.start = { dateTime: vnOffset(start), timeZone: CAL_TZ };
+          body.end = { dateTime: vnOffset(end), timeZone: CAL_TZ };
+        }
+        if (date !== undefined) Object.assign(body, { start: { date }, end: { date: addDay(date) } });
+        if (reminder_minutes !== undefined) body.reminders = remindersOf(reminder_minutes);
+        return ok(calEvent(await google("PATCH", `${CAL}/${event_id}?fields=${EVENT_FIELDS}`, body)));
+      }),
   );
 
-  tool("cal_delete", `Xóa sự kiện trên lịch; chỉ khi tiêu đề bắt đầu ${TEST_PREFIX}.`, { event_id: eventId }, async ({ event_id }) => {
-    const blocked = calWriteBlocked();
-    if (blocked) return fail(blocked);
-    const event = await google("GET", `${CAL}/${event_id}`);
-    if (!(event.summary ?? "").startsWith(TEST_PREFIX)) return fail(`Từ chối: tiêu đề không bắt đầu bằng ${TEST_PREFIX}`);
-    await google("DELETE", `${CAL}/${event_id}`);
-    return ok({ deleted: event_id });
-  });
+  tool("cal_delete", "Xóa sự kiện do trợ lý tạo. Sự kiện không do trợ lý tạo bị từ chối.", { event_id: eventId }, async ({ event_id }) =>
+    serialized(async () => {
+      const { error } = await ownedEvent(event_id);
+      if (error) return fail(error);
+      await google("DELETE", `${CAL}/${event_id}`);
+      return ok({ deleted: event_id });
+    }),
+  );
 
   return server;
 }
