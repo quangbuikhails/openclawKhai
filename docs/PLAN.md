@@ -139,6 +139,7 @@ Quy ước:
 
 | Ngày | Nhãn git | Phiên bản OpenClaw | Thay đổi | Kiểm tra 7.3 |
 |---|---|---|---|---|
+| 20/10/2026 | (chưa gắn nhãn) | 2026.10.3 | G2-04: server MCP `google`, skill `cong-viec` | Đạt (16 giây) |
 | 15/10/2026 | (chưa gắn nhãn) | 2026.10.3 (59cb447), `sha256:70b8dbd23f8d…` | Cài lần đầu theo D19 (G1-02); mô hình mặc định `openai/gpt-6-astra` | Chưa áp dụng |
 
 **Sao lưu**
