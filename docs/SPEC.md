@@ -63,13 +63,15 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - Thêm lịch hẹn bằng câu tự nhiên (thời gian, địa điểm, nội dung tóm tắt).
 - Xem lịch hôm nay, ngày mai, tuần này.
 - Trước khi tạo, đổi giờ, hủy lịch hẹn: nhắc lại thông tin để chủ xác nhận.
-- Trùng giờ với lịch đã có: cảnh báo trước khi tạo.
-- Chỉ thao tác trên lịch riêng dành cho trợ lý; không mời người khác, không gửi email.
+- Trùng giờ với sự kiện có giờ đã có: cảnh báo trước khi tạo, chỉ tạo khi chủ xác nhận lại. Sự kiện cả ngày (như [Nhắc], [Hạn]) không tính là trùng.
+- Lịch hẹn tạo trên lịch "Công việc" (D17), kèm nhắc trước 30 phút do Google Calendar báo trên điện thoại.
+- Sửa, dời, hủy chỉ áp dụng cho sự kiện do trợ lý tạo (PLAN.md D25); sự kiện chủ tự tạo trợ lý chỉ xem. Khi xem lịch, trợ lý chỉ đọc tiêu đề và giờ.
+- Không mời người khác, không gửi email.
 
 **Nhắc nhở**
 - **Nhắc hạn công việc:** Ngày nhắc việc = Hạn hoàn thành trừ 3 ngày; nếu Hạn hoàn thành trống thì tính theo Thời hạn yêu cầu trong văn bản. Ngày nhắc rơi vào thứ Bảy hoặc Chủ nhật thì nhắc vào thứ Sáu liền trước. Đến ngày nhắc, trợ lý nhắn chủ qua Zalo hoặc Telegram, web app hiện cảnh báo.
 - **Đẩy sang Google Calendar:** mỗi việc có hạn tạo hai sự kiện cả ngày trên lịch "Công việc": "[Nhắc] …" vào Ngày nhắc việc và "[Hạn] …" vào Hạn hoàn thành, để điện thoại vẫn báo khi máy chạy trợ lý tắt. Đổi hạn, đổi trạng thái Đã xong hoặc Hủy thì cập nhật hoặc gỡ hai sự kiện này.
-- Nhắc trước giờ hẹn 30 phút.
+- Nhắc trước giờ hẹn 30 phút: do Google Calendar nhắc trên điện thoại (đặt khi tạo lịch hẹn), không gửi thêm tin Zalo, Telegram.
 - Bản tin đầu ngày gửi 07:30 thứ Hai đến thứ Sáu, không gửi thứ Bảy, Chủ nhật: lịch hôm nay + việc đến hạn + việc quá hạn (việc quá hạn gộp vào bản tin, không gửi riêng).
 - Không có tổng kết tuần (đã chốt D22).
 - Không đọc được dữ liệu Google: báo lỗi cho chủ, không gửi bản tin rỗng.
@@ -80,7 +82,7 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - [ ] Chủ từ chối ở bước xác nhận: Sheets và Calendar không thay đổi.
 - [ ] Chủ sửa trực tiếp một dòng trên Sheets: trợ lý trả lời theo dữ liệu mới.
 - [ ] Thêm lịch hẹn: sự kiện xuất hiện đúng giờ trên Google Calendar trên điện thoại; lịch trùng giờ được cảnh báo.
-- [ ] Nhắc trước giờ hẹn và bản tin đầu ngày gửi đúng giờ trong 3 ngày chạy thử liên tục.
+- [ ] Chuông nhắc trước giờ hẹn (Calendar) và bản tin đầu ngày (tin nhắn) đúng giờ trong 3 ngày chạy thử liên tục.
 - [ ] Tạm ngắt bot Zalo: lời nhắc vẫn tới qua Telegram theo cách đã chốt ở C4.
 - [ ] Câu lệnh mơ hồ thì trợ lý hỏi lại.
 
@@ -238,7 +240,7 @@ Dùng cho nghiệm thu Gói 1 (câu làm được trên Control UI) và Gói 3 (
 | CV5 | Công việc | Đánh dấu xong một việc [TEST] | `status` = `Đã xong`, có dòng `log` (`action`=`doi_trang_thai`) |
 | CV6 | Công việc | Chủ sửa tay Hạn hoặc Trạng thái của một dòng trên Sheets rồi hỏi lại | Trả lời theo dữ liệu mới; Ngày nhắc việc tự tính lại; không có dòng `log` cho lần sửa tay |
 | CV7 | Công việc | Thêm qua Telegram, xem qua Zalo | Hai kênh cùng dữ liệu. Kiểm chứng ở G2-07 (G2-02, G2-03 còn bị C18, C19 chặn) |
-| LH1 | Lịch hẹn | Đặt lịch [TEST] rồi xác nhận | Sự kiện đúng giờ trên lịch "Công việc"; điện thoại báo theo C4 |
+| LH1 | Lịch hẹn | Đặt lịch [TEST] rồi xác nhận | Sự kiện đúng giờ trên lịch "Công việc"; điện thoại báo chuông trước 30 phút (theo kết quả phép thử D17 ở G2-05) |
 | LH2 | Lịch hẹn | Đặt lịch [TEST] trùng giờ | Cảnh báo trùng trước khi tạo |
 | LH3 | Lịch hẹn | Dời, hủy lịch [TEST] | Hỏi xác nhận rồi mới làm |
 | LH4 | Lịch hẹn | "Mai có lịch gì?" | Khớp lịch "Công việc" |
