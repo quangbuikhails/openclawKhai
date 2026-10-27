@@ -13,7 +13,6 @@ const TEST_PREFIX = "[TEST]";
 const CAL_OWNER = "khai-pbs"; // dấu extendedProperties.private.owner trên mọi sự kiện server tạo (PLAN.md D25)
 const LH_LABEL = "[LH]";
 const CAL_TZ = "Asia/Ho_Chi_Minh";
-const DEFAULT_TIMED_REMINDER = 30;
 const MAX_EVENT_MS = 24 * 3600000;
 const SHEET_TAB = "bieu";
 const LOG_TAB = "log";
@@ -149,7 +148,6 @@ const localDateTime = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "yyyy-mm-ddThh:mm")
   .refine((v) => isRealDate(v.slice(0, 10)) && Number(v.slice(11, 13)) < 24 && Number(v.slice(14, 16)) < 60, "ngày giờ không hợp lệ");
-const reminderMinutes = z.number().int().min(0).max(40320);
 const stt = z.number().int().min(1).max(100000);
 const channel = z.enum(CHANNELS).describe("Kênh chủ đang nhắn: ui (Control UI), zalo, telegram, web");
 const shortText = (max) => z.string().max(max);
@@ -410,7 +408,6 @@ function buildServer() {
   const stripLabel = (t) => (t.startsWith(`${LH_LABEL} `) ? t.slice(LH_LABEL.length + 1) : t);
   const testTitleError = (t) =>
     CAL_MODE === "test" && !t.startsWith(TEST_PREFIX) ? `Từ chối: lịch đang ở chế độ test, tiêu đề phải bắt đầu ${TEST_PREFIX}` : null;
-  const remindersOf = (minutes) => ({ useDefault: false, overrides: [{ method: "popup", minutes }] });
 
   // Đọc sự kiện trước khi ghi; trả lỗi nếu không có hoặc không phải do trợ lý tạo.
   async function ownedEvent(event_id) {
@@ -451,16 +448,15 @@ function buildServer() {
 
   tool(
     "cal_create",
-    `Tạo sự kiện trên lịch "Công việc". Có giờ: truyền start, end (yyyy-mm-ddThh:mm, giờ Việt Nam), tiêu đề tự thêm nhãn ${LH_LABEL}, nhắc trước mặc định ${DEFAULT_TIMED_REMINDER} phút. Cả ngày: truyền date. Trùng giờ với sự kiện có giờ khác thì từ chối và trả danh sách trùng; chỉ tạo khi chủ đã xác nhận lại và accept_conflict=true.`,
+    `Tạo sự kiện trên lịch "Công việc". Có giờ: truyền start, end (yyyy-mm-ddThh:mm, giờ Việt Nam), tiêu đề tự thêm nhãn ${LH_LABEL}. Cả ngày: truyền date. Chuông nhắc do cài đặt thông báo của lịch quyết định, công cụ không đặt nhắc riêng. Trùng giờ với sự kiện có giờ khác thì từ chối và trả danh sách trùng; chỉ tạo khi chủ đã xác nhận lại và accept_conflict=true.`,
     {
       title,
       start: localDateTime.optional(),
       end: localDateTime.optional(),
       date: isoDate.optional(),
-      reminder_minutes: reminderMinutes.optional(),
       accept_conflict: z.boolean().optional(),
     },
-    async ({ title: rawTitle, start, end, date, reminder_minutes, accept_conflict }) =>
+    async ({ title: rawTitle, start, end, date, accept_conflict }) =>
       serialized(async () => {
         const timed = start !== undefined || end !== undefined;
         if (timed === (date !== undefined)) return fail("Truyền start và end (có giờ), hoặc chỉ date (cả ngày)");
@@ -480,11 +476,9 @@ function buildServer() {
             summary: `${LH_LABEL} ${bare}`,
             start: { dateTime: vnOffset(start), timeZone: CAL_TZ },
             end: { dateTime: vnOffset(end), timeZone: CAL_TZ },
-            reminders: remindersOf(reminder_minutes ?? DEFAULT_TIMED_REMINDER),
           });
         } else {
           Object.assign(body, { summary: bare, start: { date }, end: { date: addDay(date) } });
-          if (reminder_minutes !== undefined) body.reminders = remindersOf(reminder_minutes);
         }
         return ok(calEvent(await google("POST", `${CAL}?fields=${EVENT_FIELDS}`, body)));
       }),
@@ -505,21 +499,20 @@ function buildServer() {
 
   tool(
     "cal_update",
-    "Sửa sự kiện do trợ lý tạo: đổi tiêu đề, dời giờ (start và end, sự kiện có giờ) hoặc dời ngày (date, sự kiện cả ngày), đổi nhắc. Dời sang giờ trùng thì từ chối trừ khi accept_conflict=true. Sự kiện không do trợ lý tạo bị từ chối.",
+    "Sửa sự kiện do trợ lý tạo: đổi tiêu đề, dời giờ (start và end, sự kiện có giờ) hoặc dời ngày (date, sự kiện cả ngày). Dời sang giờ trùng thì từ chối trừ khi accept_conflict=true. Sự kiện không do trợ lý tạo bị từ chối.",
     {
       event_id: eventId,
       title: title.optional(),
       start: localDateTime.optional(),
       end: localDateTime.optional(),
       date: isoDate.optional(),
-      reminder_minutes: reminderMinutes.optional(),
       accept_conflict: z.boolean().optional(),
     },
-    async ({ event_id, title: rawTitle, start, end, date, reminder_minutes, accept_conflict }) =>
+    async ({ event_id, title: rawTitle, start, end, date, accept_conflict }) =>
       serialized(async () => {
         if ((start === undefined) !== (end === undefined)) return fail("start và end phải đi cùng nhau");
         if (start !== undefined && date !== undefined) return fail("Chỉ truyền start và end, hoặc date, không cả hai");
-        if ([rawTitle, start, date, reminder_minutes].every((v) => v === undefined)) return fail("Không có gì để sửa");
+        if ([rawTitle, start, date].every((v) => v === undefined)) return fail("Không có gì để sửa");
         const { ev, error } = await ownedEvent(event_id);
         if (error) return fail(error);
         const isTimed = Boolean(ev.start?.dateTime);
@@ -543,7 +536,6 @@ function buildServer() {
           body.end = { dateTime: vnOffset(end), timeZone: CAL_TZ };
         }
         if (date !== undefined) Object.assign(body, { start: { date }, end: { date: addDay(date) } });
-        if (reminder_minutes !== undefined) body.reminders = remindersOf(reminder_minutes);
         return ok(calEvent(await google("PATCH", `${CAL}/${event_id}?fields=${EVENT_FIELDS}`, body)));
       }),
   );
