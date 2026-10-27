@@ -64,7 +64,7 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - Xem lịch hôm nay, ngày mai, tuần này.
 - Trước khi tạo, đổi giờ, hủy lịch hẹn: nhắc lại thông tin để chủ xác nhận.
 - Trùng giờ với sự kiện có giờ đã có: cảnh báo trước khi tạo, chỉ tạo khi chủ xác nhận lại. Sự kiện cả ngày (như [Nhắc], [Hạn]) không tính là trùng.
-- Lịch hẹn tạo trên lịch "Công việc" (D17), kèm nhắc trước 30 phút do Google Calendar báo trên điện thoại.
+- Lịch hẹn tạo trên lịch "Công việc" (D17), chuông do thông báo mặc định của lịch "Công việc" quyết định (sự kiện có giờ: 30 phút trước; cả ngày: 09:00), công cụ không đặt nhắc riêng.
 - Sửa, dời, hủy chỉ áp dụng cho sự kiện do trợ lý tạo (PLAN.md D25); sự kiện chủ tự tạo trợ lý chỉ xem. Khi xem lịch, trợ lý chỉ đọc tiêu đề và giờ.
 - Không mời người khác, không gửi email.
 
@@ -240,7 +240,7 @@ Dùng cho nghiệm thu Gói 1 (câu làm được trên Control UI) và Gói 3 (
 | CV5 | Công việc | Đánh dấu xong một việc [TEST] | `status` = `Đã xong`, có dòng `log` (`action`=`doi_trang_thai`) |
 | CV6 | Công việc | Chủ sửa tay Hạn hoặc Trạng thái của một dòng trên Sheets rồi hỏi lại | Trả lời theo dữ liệu mới; Ngày nhắc việc tự tính lại; không có dòng `log` cho lần sửa tay |
 | CV7 | Công việc | Thêm qua Telegram, xem qua Zalo | Hai kênh cùng dữ liệu. Kiểm chứng ở G2-07 (G2-02, G2-03 còn bị C18, C19 chặn) |
-| LH1 | Lịch hẹn | Đặt lịch [TEST] rồi xác nhận | Sự kiện đúng giờ trên lịch "Công việc"; điện thoại báo chuông trước 30 phút (theo kết quả phép thử D17 ở G2-05) |
+| LH1 | Lịch hẹn | Đặt lịch [TEST] rồi xác nhận | Sự kiện đúng giờ trên lịch "Công việc"; điện thoại báo theo thông báo mặc định của lịch (có giờ: 30 phút trước), công cụ không đặt nhắc riêng |
 | LH2 | Lịch hẹn | Đặt lịch [TEST] trùng giờ | Cảnh báo trùng trước khi tạo |
 | LH3 | Lịch hẹn | Dời, hủy lịch [TEST] | Hỏi xác nhận rồi mới làm |
 | LH4 | Lịch hẹn | "Mai có lịch gì?" | Khớp lịch "Công việc" |
