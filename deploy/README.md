@@ -52,6 +52,7 @@ Rồi `docker compose up -d openclaw-gateway`. Digest đang dùng ghi trong bả
    ```bash
    cd ~/apps/openclaw
    docker compose stop openclaw-gateway
+   # Lần đăng nhập thứ hai (27/10/2026) đã dùng tên ~/.openclaw.truoc-dangnhap2; lần sau đổi hậu tố để không đè bản cũ.
    test ! -e ~/.openclaw.truoc-dangnhap && cp -a ~/.openclaw ~/.openclaw.truoc-dangnhap
    ls -ld ~/.openclaw ~/.openclaw.truoc-dangnhap
    ```
@@ -89,6 +90,7 @@ Rồi `docker compose up -d openclaw-gateway`. Digest đang dùng ghi trong bả
    cd ~/apps/openclaw
    docker compose stop openclaw-gateway
    mv ~/.openclaw ~/.openclaw.hong-$(date +%Y%m%d-%H%M)
+   # Chọn đúng bản sao lưu của lần đăng nhập vừa làm: truoc-dangnhap (18/10/2026) hoặc truoc-dangnhap2 (27/10/2026).
    cp -a ~/.openclaw.truoc-dangnhap ~/.openclaw
    docker compose up -d openclaw-gateway
    curl -fsS http://127.0.0.1:28789/healthz
@@ -101,11 +103,11 @@ Nguồn (docs.openclaw.ai, bản đang phát hành, chưa đối chiếu với 2
 Đã kiểm chứng (18/10/2026, OpenClaw 2026.10.3):
 
 - `docker compose exec openclaw-gateway node dist/index.js models auth login --provider openai --device-code` chạy được trong Docker, trực tiếp trong terminal, không cần `-it`; không dùng `--force`, `--profile-id`, `--set-default`.
-- Sau đăng nhập chỉ còn 1 hồ sơ OAuth; mô hình mặc định không đổi; `expiresAt` chuyển từ `1792943476465` sang `1793182040342` (khoảng 17:07 ngày 28/10/2026, `models status` ghi "expires in 10d"), tức hạn mỗi lần đăng nhập khoảng 10 ngày. `models status --check` thoát 0 (`status=usable`), `healthz` live, phiên mới trả lời bình thường.
+- Sau đăng nhập chỉ còn 1 hồ sơ OAuth; mô hình mặc định không đổi; `expiresAt` chuyển từ `1792943476465` sang `1793182040342` (khoảng 17:07 ngày 28/10/2026, `models status` ghi "expires in 10d"), tức hạn mỗi lần đăng nhập khoảng 10 ngày. Lần đăng nhập thứ hai (27/10/2026) đưa `expiresAt` sang `1793935067843` (10:17 ngày 06/11/2026). `models status --check` thoát 0 (`status=usable`), `healthz` live, phiên mới trả lời bình thường.
 
 Chưa kiểm chứng:
 
-- OpenClaw có tự làm mới (refresh) trước hạn không, vì sao `expiresAt` không đổi trước khi đăng nhập lại; ý nghĩa của `expiresAt` (hạn access token hay hạn phiên OAuth). Theo dõi `expiresAt` trước 28/10/2026 và đăng nhập lại nếu còn dưới 3 ngày.
+- Đã kiểm chứng 27/10/2026: OpenClaw không tự gia hạn đăng nhập Codex (`expiresAt` giữ nguyên, `post-deploy-check` báo còn 1,3 ngày dù Gateway chạy bình thường), phải đăng nhập lại bằng tay. Chưa rõ ý nghĩa của `expiresAt` (hạn access token hay hạn phiên OAuth). Theo dõi `expiresAt` và đăng nhập lại trước 06/11/2026 (nếu còn dưới 3 ngày).
 - Ngưỡng "sắp hết hạn" của `models status --check`.
 - Cách hoàn tác ở bước 5 (chưa chạy thử).
 
