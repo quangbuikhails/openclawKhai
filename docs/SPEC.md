@@ -72,7 +72,8 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - **Nhắc hạn công việc:** Ngày nhắc việc = Hạn hoàn thành trừ 3 ngày; nếu Hạn hoàn thành trống thì tính theo Thời hạn yêu cầu trong văn bản. Ngày nhắc rơi vào thứ Bảy hoặc Chủ nhật thì nhắc vào thứ Sáu liền trước. Đến ngày nhắc, trợ lý nhắn chủ qua Zalo hoặc Telegram, web app hiện cảnh báo.
 - **Đẩy sang Google Calendar:** mỗi việc có hạn tạo hai sự kiện cả ngày trên lịch "Công việc": "[Nhắc] …" vào Ngày nhắc việc và "[Hạn] …" vào Hạn hoàn thành, để điện thoại vẫn báo khi máy chạy trợ lý tắt. Đổi hạn, đổi trạng thái Đã xong hoặc Hủy thì cập nhật hoặc gỡ hai sự kiện này.
 - Nhắc trước giờ hẹn 30 phút: do Google Calendar nhắc trên điện thoại (đặt khi tạo lịch hẹn), không gửi thêm tin Zalo, Telegram.
-- Bản tin đầu ngày gửi 07:30 thứ Hai đến thứ Sáu, không gửi thứ Bảy, Chủ nhật: lịch hôm nay + việc đến hạn + việc quá hạn (việc quá hạn gộp vào bản tin, không gửi riêng).
+- Bản tin đầu ngày gửi 07:30 thứ Hai đến thứ Sáu, không gửi thứ Bảy, Chủ nhật: lịch hôm nay (kèm giờ) và ba mục việc: Hạn hôm nay, Đến ngày nhắc (Ngày nhắc việc là hôm nay), Quá hạn. Việc quá hạn gộp vào bản tin, không gửi riêng (D30).
+- Nhắc 14:00 thứ Hai đến thứ Sáu: việc có Hạn hoàn thành là hôm nay mà chưa `Đã xong` hoặc `Hủy`. Không có việc thì không gửi tin (D29).
 - Không có tổng kết tuần (đã chốt D22).
 - Không đọc được dữ liệu Google: báo lỗi cho chủ, không gửi bản tin rỗng.
 
@@ -82,7 +83,7 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - [ ] Chủ từ chối ở bước xác nhận: Sheets và Calendar không thay đổi.
 - [ ] Chủ sửa trực tiếp một dòng trên Sheets: trợ lý trả lời theo dữ liệu mới.
 - [ ] Thêm lịch hẹn: sự kiện xuất hiện đúng giờ trên Google Calendar trên điện thoại; lịch trùng giờ được cảnh báo.
-- [ ] Chuông nhắc trước giờ hẹn (Calendar) và bản tin đầu ngày (tin nhắn) đúng giờ trong 3 ngày chạy thử liên tục.
+- [ ] Chuông nhắc trước giờ hẹn (Calendar) đúng giờ; bản tin đầu ngày 07:30 và nhắc 14:00 (tin nhắn, kiểm ở NV1b) đúng giờ, đúng nội dung, trong 3 ngày chạy thử liên tục.
 - [ ] Tạm ngắt bot Zalo: lời nhắc vẫn tới qua Telegram theo cách đã chốt ở C4.
 - [ ] Câu lệnh mơ hồ thì trợ lý hỏi lại.
 
@@ -244,9 +245,12 @@ Dùng cho nghiệm thu Gói 1 (câu làm được trên Control UI) và Gói 3 (
 | LH2 | Lịch hẹn | Đặt lịch [TEST] trùng giờ | Cảnh báo trùng trước khi tạo |
 | LH3 | Lịch hẹn | Dời, hủy lịch [TEST] | Hỏi xác nhận rồi mới làm |
 | LH4 | Lịch hẹn | "Mai có lịch gì?" | Khớp lịch "Công việc" |
-| NV1 | Nhắc việc | Việc thử chạy một lần sau 2 phút | Tin đến kênh của chủ đúng giờ |
-| NV2 | Nhắc việc | Việc [TEST] có Hạn hoàn thành lần lượt rơi vào từng thứ trong tuần | Cột Ngày nhắc việc = hạn − 3 ngày, rơi thứ Bảy hoặc Chủ nhật thì lùi về thứ Sáu: hạn thứ Hai → thứ Sáu tuần trước; thứ Ba (hạn − 3 là thứ Bảy) → thứ Sáu; thứ Tư (hạn − 3 là Chủ nhật) → thứ Sáu; thứ Năm → thứ Hai; thứ Sáu → thứ Ba; thứ Bảy → thứ Tư; Chủ nhật → thứ Năm. Ví dụ hạn 26/10/2026 (thứ Hai), 27/10, 28/10 đều nhắc 23/10/2026. Task G2-04 chỉ kiểm giá trị cột; tin nhắc đến kênh kiểm ở G2-06 |
+| NV1a | Nhắc việc | Job thử `--command` chạy theo lịch (G2-06, khi chưa nối kênh) | Chạy đúng giờ (`runAtIso`), `summary` trong `automations runs` đúng nội dung bản tin; với `--no-deliver` thì `deliveryStatus` là `not-requested`; lỗi đọc Google thì báo lỗi, không có bản tin rỗng |
+| NV1b | Nhắc việc | Tin nhắc tới kênh thật (G2-07, sau khi G2-02, G2-03 xong) | Tin đến kênh của chủ đúng giờ; khi bot Zalo lỗi thì Telegram nhận được thông báo (nội dung theo cách chốt ở G2-03) |
+| NV2 | Nhắc việc | Việc [TEST] có Hạn hoàn thành lần lượt rơi vào từng thứ trong tuần | Cột Ngày nhắc việc = hạn − 3 ngày, rơi thứ Bảy hoặc Chủ nhật thì lùi về thứ Sáu: hạn thứ Hai → thứ Sáu tuần trước; thứ Ba (hạn − 3 là thứ Bảy) → thứ Sáu; thứ Tư (hạn − 3 là Chủ nhật) → thứ Sáu; thứ Năm → thứ Hai; thứ Sáu → thứ Ba; thứ Bảy → thứ Tư; Chủ nhật → thứ Năm. Ví dụ hạn 26/10/2026 (thứ Hai), 27/10, 28/10 đều nhắc 23/10/2026. Task G2-04 chỉ kiểm giá trị cột; tin nhắc đến kênh kiểm ở G2-07 (NV1b) |
 | NV3 | Nhắc việc | Việc [TEST] chỉ có Thời hạn trong văn bản; thêm việc [TEST] có cả hai loại hạn | Chỉ có Thời hạn trong văn bản: Ngày nhắc tính theo đó. Có cả hai: tính theo Hạn hoàn thành |
+| NV4 | Nhắc việc | Chạy bản tin 07:30 (job `--command`) khi có việc [TEST] hạn hôm nay, việc có Ngày nhắc việc là hôm nay, việc quá hạn và một lịch hẹn [TEST] hôm nay. Rồi tạm dừng server Google và chạy lại. Chạy nhắc 14:00 khi không có việc hạn hôm nay | Bản tin có lịch hôm nay kèm giờ và đủ ba mục Hạn hôm nay, Đến ngày nhắc, Quá hạn, chỉ gồm trích yếu, số ký hiệu, hạn. Khi server Google dừng thì bản tin là câu báo lỗi, không rỗng. Nhắc 14:00 không có việc thì không gửi tin (`NO_REPLY`) |
+| NV5 | Nhắc việc | Việc [TEST] có hạn: thêm việc; đổi hạn; đánh `Đã xong` rồi mở lại; đánh `Hủy`; sửa tay Hạn trên Sheets rồi chạy đối chiếu | Thêm: có đúng hai sự kiện cả ngày [Nhắc] và [Hạn] (mang `owner`, `stt`, `kind`). Đổi hạn: hai sự kiện dời theo. `Đã xong` hoặc `Hủy`: gỡ cả hai. Mở lại: tạo lại. Sửa tay rồi đối chiếu: lịch khớp. Gọi đồng bộ lại không sinh sự kiện trùng. Calendar lỗi thì trợ lý báo "đã lưu việc, chưa đồng bộ lịch" |
 | TV1 | Tiếp nhận (2C) | Gửi ảnh văn bản thông thường [TEST] | Dòng đề xuất đúng các trường bóc tách |
 | TV2 | Tiếp nhận (2C) | Gửi PDF scan và tệp Word | Bóc tách được; trường không chắc có "(cần kiểm tra)" |
 | TV3 | Tiếp nhận (2C) | Từ chối ở bước xác nhận | Biểu, Drive, Calendar không đổi |
