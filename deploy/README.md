@@ -158,3 +158,32 @@ Anh Khải tự làm (không dán khóa, token vào chat hay repo):
    Lấy tên công cụ thực tế bằng `mcp probe` hoặc `mcp doctor <tên> --probe`.
 
 Hoàn tác: `mcp unset <tên>` (hoặc chép lại `openclaw.json.truoc-nhom11`), rồi `docker compose -f … -f … rm -sf khai-mcp-google`; xóa `secrets/mcp-google.env`, `secrets/google-sa.json` và thu hồi khóa trong Google Cloud. Không xóa volume.
+
+## Lọc công cụ MCP và đồng bộ workspace cho G2-06c (anh Khải tự làm)
+
+Cú pháp `openclaw mcp tools … --include … --exclude …` đã chạy được trên OpenClaw 2026.10.3 (29/10/2026); `mcp show --json | grep toolFilter` và `config validate` đạt. Cờ `--dry-run` của `mcp tools` chưa kiểm chứng; lệnh khác với dưới đây thì đối chiếu https://docs.openclaw.ai (`/cli/mcp`). Lệnh `openclaw` chạy trong `~/apps/openclaw` qua `docker compose exec openclaw-gateway node dist/index.js <lệnh>` (viết tắt `OC` bên dưới). `task_sync_all` bị loại vì chỉ job `--command` gọi (qua HTTP), mô hình không được gọi.
+
+```bash
+cd ~/apps/openclaw
+OC="docker compose exec openclaw-gateway node dist/index.js"
+
+# 1. Sao lưu cấu hình (không dừng Gateway)
+cp -p ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.truoc-g206c
+
+# 2. Đặt bộ lọc công cụ cho máy chủ "google"
+$OC mcp tools google --include "date_*,task_*,cal_*,brief_today" --exclude task_sync_all
+
+# 3. Kiểm: phải thấy toolFilter có đúng include/exclude trên
+$OC mcp show google --json | grep toolFilter
+
+# 4. Kiểm cấu hình và Gateway
+$OC config validate
+curl -fsS http://127.0.0.1:28789/healthz
+
+# 5. Đồng bộ workspace: xem trước, đọc kết quả, rồi chạy thật
+cd ~/projects/khai-phien-ban-so
+bash scripts/dong-bo-workspace.sh --dry-run
+bash scripts/dong-bo-workspace.sh
+```
+
+Sau đó mở phiên mới trên Control UI (dấu + cạnh PHIÊN) rồi chạy danh sách kiểm chứng G2-06c trong `docs/tasks.md`. Hoàn tác: chép lại `~/.openclaw/openclaw.json.truoc-g206c` (hoặc đặt lại bộ lọc cũ `sheet_*`... theo tài liệu), đồng bộ lại workspace từ commit trước.
