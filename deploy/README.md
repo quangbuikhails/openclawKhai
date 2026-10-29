@@ -115,15 +115,39 @@ Chưa kiểm chứng:
 
 Server MCP nhỏ (`mcp-google/server.mjs`) chạy ở container riêng `khai-mcp-google`, dùng lại image OpenClaw đang ghim digest (Node và SDK MCP có sẵn trong `/app/node_modules`, không thêm package). HTTP trong mạng `khai-pbs_default`, không publish cổng. Chỉ thao tác đúng một bảng tính và một lịch theo `SPREADSHEET_ID`, `CALENDAR_ID` trong `secrets/mcp-google.env` (đổi tên từ `TEST_SPREADSHEET_ID`, `TEST_CALENDAR_ID` ở G2-04: phải sửa tệp này trước khi chạy lại). `SHEET_MODE`, `CAL_MODE` (`test` mặc định, hoặc `prod`) phải khớp tên bảng tính, lịch; chế độ `test` chỉ ghi vào việc có Nội dung cần xử lý bắt đầu `[TEST]`. Công cụ: `task_list`, `task_add`, `task_set_status`, `task_set_due`, `date_today`, `cal_*`; không có công cụ xóa dòng. `cal_create`, `cal_update`, `cal_delete` chỉ tác động sự kiện do trợ lý tạo (dấu `private.owner`, PLAN.md D25), sự kiện chủ tự tạo chỉ đọc; `CAL_MODE=test` bắt buộc tiêu đề bắt đầu `[TEST]`.
 
-Bản tin và đồng bộ lịch (G2-06b): công cụ `brief_today`, `task_sync_calendar`, `task_sync_all`; `task_add`, `task_set_due`, `task_set_status` tự đồng bộ [Nhắc], [Hạn] (sự kiện cả ngày mang `private.owner`, `stt`, `kind`; không tạo mới sự kiện có ngày đã qua). Điểm HTTP cho job `--command`, dùng token riêng `BRIEF_TOKEN` (không mở được `/mcp`; thiếu, dưới 32 ký tự hoặc trùng `MCP_GOOGLE_TOKEN` thì các đường này trả 404): `GET /brief/morning` (07:30), `GET /brief/afternoon` (14:00, không có việc thì đúng `NO_REPLY`), `POST /sync/all` (một dòng tóm tắt; dừng nếu biểu rỗng, đọc lỗi, hoặc định xóa quá 10 sự kiện; `?force=1` chỉ vượt ngưỡng 10, job đối chiếu 06:30 không dùng; `?quiet=1` thì thành công in đúng `NO_REPLY`, dừng hoặc lỗi vẫn in câu "⚠️"). Lỗi nghiệp vụ trả HTTP 200 kèm câu bắt đầu "⚠️". Không đưa token vào dòng lệnh job: lệnh chỉ tham chiếu biến môi trường của Gateway (lệnh mẫu chốt ở G2-06d).
+Bản tin và đồng bộ lịch (G2-06b): công cụ `brief_today`, `task_sync_calendar`, `task_sync_all`; `task_add`, `task_set_due`, `task_set_status` tự đồng bộ [Nhắc], [Hạn] (sự kiện cả ngày mang `private.owner`, `stt`, `kind`; không tạo mới sự kiện có ngày đã qua). Điểm HTTP cho job `--command`, dùng token riêng `BRIEF_TOKEN` (không mở được `/mcp`; thiếu, dưới 32 ký tự hoặc trùng `MCP_GOOGLE_TOKEN` thì các đường này trả 404): `GET /brief/morning` (07:30), `GET /brief/afternoon` (14:00, không có việc thì đúng `NO_REPLY`), `POST /sync/all` (một dòng tóm tắt; dừng nếu biểu rỗng, đọc lỗi, hoặc định xóa quá 10 sự kiện; `?force=1` chỉ vượt ngưỡng 10, job đối chiếu 06:30 không dùng; `?quiet=1` thì thành công in đúng `NO_REPLY`, dừng hoặc lỗi vẫn in câu "⚠️"). Lỗi nghiệp vụ trả HTTP 200 kèm câu bắt đầu "⚠️". Không đưa token vào dòng lệnh job: lệnh đọc tiêu đề từ tệp `brief-auth.txt` (xem ba job bên dưới, G2-06d).
 
-Lệnh mẫu cho ba job `--command` (chạy trong container Gateway; token chỉ nằm ở biến môi trường `KHAI_BRIEF_TOKEN` của container, không ghi vào dòng lệnh; phần `|| echo` bảo đảm server dừng vẫn ra câu báo lỗi chứ không rỗng; G2-06d chốt cách `--command` mở shell và khai biến):
+Ba job nhắc việc (G2-06d, anh Khải tạo ngày 29/10/2026, OpenClaw 2026.10.3; job `--command` chạy trong container Gateway qua `sh -lc`, không gọi mô hình). Token không nằm trong dòng lệnh job: `curl` đọc tiêu đề xác thực từ tệp `~/.openclaw/brief-auth.txt` (Gateway thấy là `/home/node/.openclaw/brief-auth.txt`), tệp này không nằm trong repo. Tạo tệp (chạy ở thư mục gốc repo; một dòng `Authorization: Bearer <BRIEF_TOKEN>`, quyền 600):
 
-```sh
-curl -fsS --max-time 30 -H "Authorization: Bearer $KHAI_BRIEF_TOKEN" http://khai-mcp-google:3000/brief/morning || echo "⚠️ Không lấy được bản tin 07:30: máy chủ Google không phản hồi. Anh kiểm tra giúp."
-curl -fsS --max-time 30 -H "Authorization: Bearer $KHAI_BRIEF_TOKEN" http://khai-mcp-google:3000/brief/afternoon || echo "⚠️ Không lấy được nhắc việc 14:00: máy chủ Google không phản hồi. Anh kiểm tra giúp."
-curl -fsS --max-time 60 -X POST -H "Authorization: Bearer $KHAI_BRIEF_TOKEN" "http://khai-mcp-google:3000/sync/all?quiet=1" || echo "⚠️ Không đồng bộ được lịch: máy chủ Google không phản hồi."
+```bash
+( umask 077; printf 'Authorization: Bearer %s\n' "$(grep '^BRIEF_TOKEN=' secrets/mcp-google.env | cut -d= -f2-)" > ~/.openclaw/brief-auth.txt )
 ```
+
+Lưu ý: đổi `BRIEF_TOKEN` thì phải tạo lại tệp này. Container `khai-mcp-google` có `restart: "no"`: sau khi máy khởi động lại phải `up -d --no-deps khai-mcp-google`, nếu không cả ba job in câu báo lỗi "⚠️".
+
+Lệnh tạo job (ở `~/apps/openclaw`; cả ba `--tz Asia/Ho_Chi_Minh --exact --no-deliver`, chưa gắn `--announce` cho đến khi G2-02, G2-03 xong và C18 được chốt). Phần `|| echo` bảo đảm server dừng vẫn ra câu báo lỗi chứ không rỗng; `2>/dev/null` giữ `summary` không có nhãn `stderr:`:
+
+```bash
+cd ~/apps/openclaw
+OC="docker compose exec -T openclaw-gateway node dist/index.js"
+
+$OC automations create --name "Bản tin sáng" --cron "30 7 * * 1-5" --tz Asia/Ho_Chi_Minh --exact --no-deliver \
+  --command 'curl -fsS --max-time 30 -H @/home/node/.openclaw/brief-auth.txt http://khai-mcp-google:3000/brief/morning 2>/dev/null || echo "⚠️ Không lấy được bản tin 07:30: máy chủ Google không phản hồi. Anh kiểm tra giúp."'
+
+$OC automations create --name "Nhắc việc 14:00" --cron "0 14 * * 1-5" --tz Asia/Ho_Chi_Minh --exact --no-deliver \
+  --command 'curl -fsS --max-time 30 -H @/home/node/.openclaw/brief-auth.txt http://khai-mcp-google:3000/brief/afternoon 2>/dev/null || echo "⚠️ Không lấy được nhắc việc 14:00: máy chủ Google không phản hồi. Anh kiểm tra giúp."'
+
+$OC automations create --name "Đối chiếu lịch" --cron "30 6 * * 1-5" --tz Asia/Ho_Chi_Minh --exact --no-deliver \
+  --command 'curl -fsS --max-time 60 -X POST -H @/home/node/.openclaw/brief-auth.txt "http://khai-mcp-google:3000/sync/all?quiet=1" 2>/dev/null || echo "⚠️ Không đồng bộ được lịch: máy chủ Google không phản hồi."'
+```
+
+Kết quả chạy tay 29/10/2026 (bảng thật đang rỗng): bản tin 1315 ms ra bốn mục "Không có"; nhắc 14:00 556 ms ra `NO_REPLY` (run không có `summary`, `diagnostics.summary` là `NO_REPLY`); đối chiếu 1246 ms ra cảnh báo biểu rỗng, định xóa 0 sự kiện. Xem lịch sử chạy bằng `automations runs`.
+
+Checklist iPhone (chuông lịch không phải lớp chắc chắn; bản tin và nhắc việc qua kênh vẫn là lớp chính):
+
+- [x] Tắt Chế độ Nguồn điện thấp (anh Khải làm ngày 28/10/2026).
+- [x] Bật Làm mới ứng dụng trong nền (anh Khải làm ngày 28/10/2026; chuông 10:45 không báo, báo đúng sau khi chỉnh hai mục này lúc 10:52).
+- [ ] Bật thông báo cho ứng dụng Google Calendar (Cài đặt > Thông báo).
 
 Chuyển lịch từ test sang thật (G2-05, 28/10/2026): (1) chia sẻ lịch "Công việc" cho email Service Account với quyền "Thực hiện thay đổi đối với sự kiện" (Make changes to events); (2) sao lưu `secrets/mcp-google.env`, rồi sửa `CALENDAR_ID` thành mã lịch thật và `CAL_MODE=prod` (mã lịch chỉ nằm ở tệp này, không ghi vào repo; chỉ chép dòng "ID lịch", kết thúc bằng `@group.calendar.google.com`, không chép các ô URL, mã nhúng, địa chỉ iCal; sửa tệp env bằng nano, không dán mã vào dòng lệnh); (3) tạo lại container `khai-mcp-google` (`up -d --no-deps --force-recreate khai-mcp-google`) và xem `docker logs khai-mcp-google`: phải thấy "lịch: prod". Kiểm tra mốc thông báo mặc định của lịch thật: 30 phút trước (có giờ), 09:00 (cả ngày). Ở `prod` server không còn chặn tiền tố `[TEST]`.
 
