@@ -1,6 +1,7 @@
 // Server MCP Google cho biểu theo dõi và lịch (PLAN.md D21; G2-04).
 // Chạy trong container riêng từ image OpenClaw (mount vào /app/mcp-google để dùng /app/node_modules).
 // Chỉ thao tác đúng một bảng tính và một lịch; ID lấy từ biến môi trường, không công cụ nào nhận ID từ mô hình.
+// BRIEF_TOKEN (tùy chọn, >= 32 ký tự): bật GET /brief/morning, /brief/afternoon và POST /sync/all[?force=1&quiet=1] (G2-06b).
 // SHEET_MODE, CAL_MODE: "test" (mặc định) hoặc "prod"; phải khớp tên bảng tính, lịch (test: bắt đầu "[TEST]"), sai thì thoát mã 1.
 import { createServer } from "node:http";
 import { createSign, timingSafeEqual } from "node:crypto";
@@ -34,6 +35,10 @@ const STATUSES = ["Chưa xử lý", "Đang xử lý", "Chờ ý kiến", "Đã x
 const PRIORITIES = ["Cao", "Thường"];
 const CHANNELS = ["ui", "zalo", "telegram", "web"];
 const CLOSED = new Set(["Đã xong", "Hủy"]);
+const KIND_LABEL = { nhac: "[Nhắc]", han: "[Hạn]" }; // sự kiện do đồng bộ tạo (PLAN.md D28)
+const SYNC_DELETE_LIMIT = 10; // task_sync_all, /sync/all dừng nếu định xóa nhiều hơn số này (trừ khi force=1)
+const BRIEF_LIMIT = 15;
+const GIST_MAX = 70;
 const WEEKDAYS = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
 
 function fatal(message) {
@@ -54,6 +59,9 @@ function modeEnv(name) {
 }
 
 const MCP_TOKEN = requireEnv("MCP_GOOGLE_TOKEN", /^[\x21-\x7e]{32,}$/);
+// Token riêng cho /brief/* và /sync/* (chỉ đọc bản tin, chạy đồng bộ); thiếu, dưới 32 ký tự hoặc trùng MCP_GOOGLE_TOKEN thì tắt hai nhóm đường này.
+const briefCandidate = process.env.BRIEF_TOKEN ?? "";
+const BRIEF_TOKEN = /^[\x21-\x7e]{32,}$/.test(briefCandidate) && briefCandidate !== MCP_TOKEN ? briefCandidate : "";
 const SPREADSHEET_ID = requireEnv("SPREADSHEET_ID", /^[A-Za-z0-9_-]{20,}$/);
 const CALENDAR_ID = requireEnv("CALENDAR_ID", /^[A-Za-z0-9_.@-]{5,}$/);
 const SHEET_MODE = modeEnv("SHEET_MODE");
@@ -251,6 +259,256 @@ const serialized = (fn) => {
 
 const pastWarning = (due) => (due && due < todayIso() ? { warning: "Hạn đã qua" } : {});
 
+// ---- Đồng bộ [Nhắc]/[Hạn] lên lịch (D28). Mọi hàm ghi phải được gọi trong `serialized`. ----
+const SYNC_FIELDS = "id,summary,description,status,start,end,extendedProperties/private";
+const SYNC_FAILED = "Đã lưu việc, chưa đồng bộ lịch";
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const vnDate = (iso) => iso.split("-").reverse().join("/");
+const clip = (text, max) => {
+  const t = String(text).replace(/\s+/g, " ").trim();
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+};
+// Trích yếu: Tên văn bản, trống thì Nội dung cần xử lý.
+const gist = (rec) => clip(isBlank(rec.doc_title) ? (rec.action_required ?? "") : rec.doc_title, GIST_MAX);
+
+function eventTitle(kind, rec) {
+  let text = gist(rec);
+  // Lịch test: tiêu đề phải bắt đầu [TEST] (như cal_create); việc test đã có [TEST] ở nội dung nên bỏ bớt để không lặp.
+  if (CAL_MODE === "test") text = text.replace(/^\[TEST\]\s*/, "");
+  const number = isBlank(rec.doc_number) ? "" : `${clip(rec.doc_number, 40)} – `;
+  const title = `${KIND_LABEL[kind]} ${number}${text}`;
+  return CAL_MODE === "test" ? `${TEST_PREFIX} ${title}` : title;
+}
+
+const eventDescription = (rec) => [`STT ${rec.stt}`, ...(isBlank(rec.doc_link) ? [] : [`Link: ${rec.doc_link}`])].join("\n");
+
+// Ngày sự kiện cần có của việc: việc đã xong/hủy thì không có.
+function desiredDates(rec) {
+  if (CLOSED.has(rec.status)) return { nhac: null, han: null };
+  const valid = (v) => (typeof v === "string" && ISO_DATE.test(v) ? v : null);
+  return { nhac: valid(rec.remind_date), han: valid(rec.due_date) };
+}
+
+// Chỉ sự kiện do đồng bộ tạo: có owner, kind nhac/han, stt số. Sự kiện của chủ và của cal_create không lọt vào đây.
+const isSyncEvent = (e) =>
+  e.status !== "cancelled" &&
+  byAssistant(e) &&
+  Object.hasOwn(KIND_LABEL, e.extendedProperties.private.kind) &&
+  /^\d+$/.test(e.extendedProperties.private.stt ?? "");
+
+async function listSyncEvents(onlyStt, onlyKind) {
+  const found = [];
+  let pageToken;
+  do {
+    const q = new URLSearchParams({ maxResults: onlyStt === undefined ? "250" : "50", fields: `nextPageToken,items(${SYNC_FIELDS})` });
+    q.append("privateExtendedProperty", `owner=${CAL_OWNER}`);
+    if (onlyStt !== undefined) q.append("privateExtendedProperty", `stt=${onlyStt}`);
+    if (onlyKind !== undefined) q.append("privateExtendedProperty", `kind=${onlyKind}`);
+    if (pageToken) q.set("pageToken", pageToken);
+    const data = await google("GET", `${CAL}?${q}`);
+    found.push(...(data.items ?? []).filter(isSyncEvent));
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+  return found;
+}
+
+// Kế hoạch cho một (việc, kind): xóa thừa, tạo thiếu, dời lệch. Không tạo mới sự kiện có ngày đã qua; sự kiện đã có thì vẫn dời.
+function planKind(kind, rec, date, existing, today) {
+  const del = (e) => ({ op: "delete", id: e.id });
+  if (!date) return existing.map(del);
+  const summary = eventTitle(kind, rec);
+  const description = eventDescription(rec);
+  const matches = (e) => e.summary === summary && e.start?.date === date && (e.description ?? "") === description;
+  const [keep, ...extra] = [...existing].sort((a, b) => Number(matches(b)) - Number(matches(a)));
+  const ops = extra.map(del);
+  if (!keep) {
+    if (date >= today) {
+      const body = { summary, description, start: { date }, end: { date: addDay(date) }, extendedProperties: { private: { owner: CAL_OWNER, stt: String(rec.stt), kind } } };
+      ops.push({ op: "create", body });
+    }
+  } else if (!matches(keep)) {
+    ops.push({ op: "patch", id: keep.id, body: { summary, description, start: { date, dateTime: null }, end: { date: addDay(date), dateTime: null } } });
+  }
+  return ops;
+}
+
+async function runOps(ops) {
+  const n = { created: 0, moved: 0, deleted: 0 };
+  let done = 0;
+  try {
+    for (const o of ops) {
+      if (o.op === "create") {
+        await google("POST", `${CAL}?fields=id`, o.body);
+        n.created++;
+      } else if (o.op === "patch") {
+        await google("PATCH", `${CAL}/${enc(o.id)}?fields=id`, o.body);
+        n.moved++;
+      } else {
+        await google("DELETE", `${CAL}/${enc(o.id)}`);
+        n.deleted++;
+      }
+      done++;
+    }
+  } catch (err) {
+    err.done = done;
+    throw err;
+  }
+  return n;
+}
+
+// Đồng bộ hai sự kiện của một việc. rec phải có stt, status, due_date, remind_date, doc_title, doc_number, action_required, doc_link.
+async function syncTask(rec) {
+  const today = todayIso();
+  const want = desiredDates(rec);
+  const ops = [];
+  for (const kind of Object.keys(KIND_LABEL)) {
+    ops.push(...planKind(kind, rec, want[kind], await listSyncEvents(rec.stt, kind), today));
+  }
+  return runOps(ops);
+}
+
+// Sau khi đã ghi Sheets: Calendar lỗi thì việc vẫn đã lưu, chỉ báo chưa đồng bộ.
+async function syncAfterWrite(rec) {
+  try {
+    return { calendar_sync: await syncTask(rec) };
+  } catch {
+    console.log("sync=loi");
+    return { calendar_sync: "failed", calendar_message: SYNC_FAILED };
+  }
+}
+
+// Đọc lại Ngày nhắc việc rồi đồng bộ, sau khi biểu đã ghi: lỗi ở bước nào cũng chỉ báo chưa đồng bộ lịch, việc đã lưu.
+async function remindThenSync(row, rec) {
+  let remind;
+  try {
+    remind = await readRemind(row);
+  } catch {
+    console.log("remind=loi");
+    return {
+      remind: { remind_date: null, remind_error: "Không đọc lại được Ngày nhắc việc" },
+      synced: { calendar_sync: "failed", calendar_message: SYNC_FAILED },
+    };
+  }
+  return { remind, synced: await syncAfterWrite({ ...rec, remind_date: remind.remind_date }) };
+}
+
+// Đối chiếu cả biểu với lịch. Trả { stopped } khi dừng (chưa ghi gì, hoặc dừng giữa chừng), ngược lại trả số liệu.
+async function syncAll(force) {
+  let table;
+  let events;
+  try {
+    table = await readTable();
+    events = await listSyncEvents();
+  } catch {
+    return { stopped: "⚠️ Dừng đồng bộ lịch: không đọc được biểu hoặc lịch; số sự kiện định xóa chưa tính được, chưa ghi gì vào lịch." };
+  }
+  const rows = table.filter((r) => isUsed(r.cells)).map((r) => toRecord(r.row, r.cells));
+  // Dòng có dữ liệu mà STT trống hoặc không phải số: bỏ qua, không coi là STT 0.
+  const recs = rows.filter((r) => !isBlank(r.stt) && Number.isInteger(Number(r.stt)));
+  recs.forEach((r) => (r.stt = Number(r.stt)));
+  let skipped = rows.length - recs.length;
+  if (recs.length === 0) {
+    return { stopped: `⚠️ Dừng đồng bộ lịch: biểu rỗng hoặc không dòng nào có STT; định xóa ${events.length} sự kiện, chưa ghi gì vào lịch.` };
+  }
+  const count = new Map();
+  recs.forEach((r) => count.set(r.stt, (count.get(r.stt) ?? 0) + 1));
+  const byKey = new Map();
+  for (const e of events) {
+    const key = `${e.extendedProperties.private.stt}:${e.extendedProperties.private.kind}`;
+    byKey.set(key, [...(byKey.get(key) ?? []), e]);
+  }
+  const today = todayIso();
+  const ops = [];
+  for (const rec of recs) {
+    // STT trùng, hoặc việc không được phép động tới ở chế độ test: bỏ qua, không xóa sự kiện của nó.
+    if (count.get(rec.stt) > 1 || testGuard(rec.action_required)) {
+      skipped++;
+      continue;
+    }
+    const want = desiredDates(rec);
+    for (const kind of Object.keys(KIND_LABEL)) ops.push(...planKind(kind, rec, want[kind], byKey.get(`${rec.stt}:${kind}`) ?? [], today));
+  }
+  for (const [key, evs] of byKey) {
+    if (!count.has(Number(key.split(":")[0]))) evs.forEach((e) => ops.push({ op: "delete", id: e.id })); // việc không còn trên biểu
+  }
+  const deletes = ops.filter((o) => o.op === "delete").length;
+  if (deletes > SYNC_DELETE_LIMIT && !force) {
+    return { stopped: `⚠️ Dừng đồng bộ lịch: định xóa ${deletes} sự kiện, vượt ngưỡng ${SYNC_DELETE_LIMIT}; chưa ghi gì vào lịch. Cần anh kiểm tra biểu.` };
+  }
+  const patches = ops.filter((o) => o.op === "patch").length;
+  try {
+    const n = await runOps(ops);
+    return { ...n, kept: events.length - deletes - patches, skipped };
+  } catch (err) {
+    return { stopped: `⚠️ Đồng bộ lịch dừng giữa chừng vì lỗi Google sau ${err.done ?? 0}/${ops.length} thao tác; chạy lại để vá.` };
+  }
+}
+
+const syncLine = (r) => `Đồng bộ lịch: tạo ${r.created}, dời ${r.moved}, xóa ${r.deleted}, giữ ${r.kept}, bỏ qua ${r.skipped}`;
+
+// ---- Bản tin 07:30 và nhắc 14:00. Chỉ đọc; chỉ đưa trích yếu, số ký hiệu, hạn của việc. ----
+const hhmm = (dateTime) => new Date(Date.parse(dateTime) + 7 * 3600000).toISOString().slice(11, 16);
+const BRIEF_ERROR = {
+  morning: "⚠️ Chưa dựng được bản tin 07:30 vì không đọc được Google. Anh kiểm tra giúp.",
+  afternoon: "⚠️ Chưa dựng được nhắc việc 14:00 vì không đọc được Google. Anh kiểm tra giúp.",
+};
+
+const taskLine = (r) =>
+  `- STT ${r.stt} · ${gist(r)}${isBlank(r.doc_number) ? "" : ` · số ${clip(r.doc_number, 40)}`}${r.due_date ? ` · hạn ${vnDate(r.due_date)}` : ""}`;
+
+const section = (name, lines, noun = "việc") => {
+  const more = lines.length - BRIEF_LIMIT;
+  return [`${name} (${lines.length})`, ...(lines.length ? lines.slice(0, BRIEF_LIMIT) : ["Không có"]), ...(more > 0 ? [`…và ${more} ${noun} nữa`] : [])].join("\n");
+};
+
+async function calendarLines(today) {
+  const q = new URLSearchParams({
+    timeMin: `${today}T00:00:00+07:00`,
+    timeMax: `${addDay(today)}T00:00:00+07:00`,
+    singleEvents: "true",
+    orderBy: "startTime",
+    maxResults: "50",
+    fields: `items(${SYNC_FIELDS})`,
+  });
+  const data = await google("GET", `${CAL}?${q}`);
+  // Bỏ [Nhắc]/[Hạn] do đồng bộ tạo vì đã có ở ba mục việc.
+  const items = (data.items ?? []).filter((e) => e.status !== "cancelled" && !isSyncEvent(e));
+  const timed = items.filter((e) => e.start?.dateTime).map((e) => `- ${hhmm(e.start.dateTime)}–${hhmm(e.end?.dateTime ?? e.start.dateTime)} ${clip(e.summary ?? "(không tiêu đề)", 100)}`);
+  const allDay = items.filter((e) => !e.start?.dateTime).map((e) => `- Cả ngày: ${clip(e.summary ?? "(không tiêu đề)", 100)}`);
+  return [...timed, ...allDay];
+}
+
+async function buildBrief(kind) {
+  const today = todayIso();
+  const open = (await readTable()).filter((r) => isUsed(r.cells)).map((r) => toRecord(r.row, r.cells)).filter((r) => !CLOSED.has(r.status));
+  const byDue = (a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999") || Number(a.stt) - Number(b.stt);
+  const head = `${weekdayOf(today)} ${vnDate(today)}`;
+  const dueToday = open.filter((r) => r.due_date === today).sort(byDue);
+  if (kind === "afternoon") {
+    if (dueToday.length === 0) return "NO_REPLY";
+    return [`Nhắc việc 14:00 · ${head}`, section("Việc có hạn hôm nay", dueToday.map(taskLine))].join("\n\n");
+  }
+  const remind = open.filter((r) => r.remind_date === today && (!r.due_date || r.due_date > today)).sort(byDue);
+  const overdue = open.filter((r) => r.due_date && r.due_date < today).sort(byDue);
+  return [
+    `Bản tin 07:30 · ${head}`,
+    section("Lịch hôm nay", await calendarLines(today), "mục"),
+    section("Hạn hôm nay", dueToday.map(taskLine)),
+    section("Đến ngày nhắc", remind.map(taskLine)),
+    section("Quá hạn", overdue.map(taskLine)),
+  ].join("\n\n");
+}
+
+// Lỗi đọc Google thì trả câu báo lỗi, không bao giờ trả rỗng (NV4).
+async function briefText(kind) {
+  try {
+    return await buildBrief(kind);
+  } catch {
+    console.log(`brief=${kind} ket_qua=loi`);
+    return BRIEF_ERROR[kind];
+  }
+}
+
 // ---- Kiểm tra khi khởi động: sai thì thoát mã 1, không phục vụ ----
 const sameHeaders = (got, want) => want.length === (got ?? []).length && want.every((h, i) => String(got[i]).trim() === h);
 
@@ -270,7 +528,7 @@ async function startupChecks() {
 }
 
 function buildServer() {
-  const server = new McpServer({ name: "khai-mcp-google", version: "0.3.0" });
+  const server = new McpServer({ name: "khai-mcp-google", version: "0.4.0" });
 
   // Mỗi công cụ ghi log tên và kết quả, không ghi nội dung dữ liệu.
   const tool = (name, description, inputSchema, handler) =>
@@ -321,7 +579,7 @@ function buildServer() {
 
   tool(
     "task_add",
-    "Thêm một việc vào cuối biểu (STT tự tăng, Người phụ trách và Trạng thái \"Chưa xử lý\" tự điền). Chỉ gọi sau khi chủ đã xác nhận. Trả về STT và Ngày nhắc việc đọc lại từ biểu.",
+    "Thêm một việc vào cuối biểu (STT tự tăng, Người phụ trách và Trạng thái \"Chưa xử lý\" tự điền). Chỉ gọi sau khi chủ đã xác nhận. Trả về STT và Ngày nhắc việc đọc lại từ biểu; tự đồng bộ [Nhắc], [Hạn] lên lịch (lỗi lịch thì báo \"đã lưu việc, chưa đồng bộ lịch\").",
     {
       action_required: shortText(1000).min(1).describe("Nội dung cần xử lý"),
       due_date: isoDate.optional().describe("Hạn hoàn thành; bỏ trống nếu chưa có hạn"),
@@ -365,30 +623,39 @@ function buildServer() {
         // Chỉ ghi A:M; cột N là công thức mảng trên Sheets.
         await google("PUT", `${SHEETS}/values/${enc(`${SHEET_TAB}!A${row}:M${row}`)}?valueInputOption=RAW`, { values: [values] });
         const logged = await writeLog(a.channel, "them", newStt, a.due_date ? `thêm việc, hạn ${a.due_date}` : "thêm việc, chưa có hạn");
-        return ok({ stt: newStt, ...(await readRemind(row)), ...pastWarning(a.due_date), ...logged });
+        const { remind, synced } = await remindThenSync(row, {
+          stt: newStt,
+          status: "Chưa xử lý",
+          doc_title: a.doc_title,
+          doc_number: a.doc_number,
+          action_required: a.action_required,
+          doc_link: a.doc_link,
+          due_date: a.due_date,
+        });
+        return ok({ stt: newStt, ...remind, ...pastWarning(a.due_date), ...logged, ...synced });
       }),
   );
 
   tool(
     "task_set_status",
-    "Đổi Trạng thái của việc theo STT (Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong, Hủy). Không xóa dòng: việc bỏ thì đổi sang Hủy. Chỉ gọi sau khi chủ đã xác nhận.",
+    "Đổi Trạng thái của việc theo STT (Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong, Hủy). Không xóa dòng: việc bỏ thì đổi sang Hủy. Tự đồng bộ lịch (Đã xong, Hủy thì gỡ [Nhắc], [Hạn]). Chỉ gọi sau khi chủ đã xác nhận.",
     { stt, status: z.enum(STATUSES), channel },
     ({ stt: sttValue, status, channel: ch }) =>
       serialized(async () => {
         const rec = await locate(sttValue);
         const denied = testGuard(rec.action_required);
         if (denied) return fail(denied);
-        if (rec.status === status) return ok({ stt: sttValue, unchanged: true });
+        if (rec.status === status) return ok({ stt: sttValue, unchanged: true, ...(await syncAfterWrite(rec)) });
         if (!(await stillSameRow(rec))) return fail("Biểu vừa thay đổi, thử lại");
         await writeCell(COL_LETTER.status, rec.row, status);
         const logged = await writeLog(ch, status === "Hủy" ? "huy" : "doi_trang_thai", sttValue, `${rec.status ?? "(trống)"} → ${status}`);
-        return ok({ stt: sttValue, status, ...logged });
+        return ok({ stt: sttValue, status, ...logged, ...(await syncAfterWrite({ ...rec, status })) });
       }),
   );
 
   tool(
     "task_set_due",
-    "Đổi Hạn hoàn thành của việc theo STT; due_date để trống (null) nghĩa là chưa có hạn. Trả về Ngày nhắc việc đọc lại từ biểu. Chỉ gọi sau khi chủ đã xác nhận.",
+    "Đổi Hạn hoàn thành của việc theo STT; due_date để trống (null) nghĩa là chưa có hạn. Trả về Ngày nhắc việc đọc lại từ biểu; tự dời [Nhắc], [Hạn] trên lịch. Chỉ gọi sau khi chủ đã xác nhận.",
     { stt, due_date: isoDate.nullable(), channel },
     ({ stt: sttValue, due_date, channel: ch }) =>
       serialized(async () => {
@@ -398,8 +665,40 @@ function buildServer() {
         if (!(await stillSameRow(rec))) return fail("Biểu vừa thay đổi, thử lại");
         await writeCell(COL_LETTER.due_date, rec.row, due_date ? isoToSerial(due_date) : "");
         const logged = await writeLog(ch, "doi_han", sttValue, `${rec.due_date ?? "chưa có"} → ${due_date ?? "chưa có"}`);
-        return ok({ stt: sttValue, due_date, ...(await readRemind(rec.row)), ...pastWarning(due_date), ...logged });
+        const { remind, synced } = await remindThenSync(rec.row, { ...rec, due_date });
+        return ok({ stt: sttValue, due_date, ...remind, ...pastWarning(due_date), ...logged, ...synced });
       }),
+  );
+
+  tool(
+    "task_sync_calendar",
+    "Đồng bộ sự kiện [Nhắc], [Hạn] trên lịch của một việc theo STT (tạo thiếu, dời lệch, gỡ thừa hoặc khi việc Đã xong/Hủy). Gọi nhiều lần không sinh sự kiện trùng. task_add, task_set_due, task_set_status đã tự gọi, chỉ dùng khi cần vá.",
+    { stt },
+    ({ stt: sttValue }) =>
+      serialized(async () => {
+        const rec = await locate(sttValue);
+        const denied = testGuard(rec.action_required);
+        if (denied) return fail(denied);
+        return ok({ stt: sttValue, calendar_sync: await syncTask(rec) });
+      }),
+  );
+
+  tool(
+    "task_sync_all",
+    "Đối chiếu toàn bộ biểu với sự kiện [Nhắc], [Hạn] trên lịch. Dừng và báo lý do, không ghi gì, nếu biểu rỗng, đọc lỗi hoặc định xóa nhiều sự kiện (quá ngưỡng): khi đó báo anh, không tự thử lại.",
+    {},
+    () =>
+      serialized(async () => {
+        const result = await syncAll(false);
+        return result.stopped ? fail(result.stopped) : ok(result);
+      }),
+  );
+
+  tool(
+    "brief_today",
+    "Dựng văn bản bản tin 07:30 (kind=morning: lịch hôm nay kèm giờ; ba mục Hạn hôm nay, Đến ngày nhắc, Quá hạn) hoặc nhắc 14:00 (kind=afternoon: việc có hạn hôm nay; không có việc thì trả đúng NO_REPLY). Trả nguyên văn để gửi, không thêm bớt.",
+    { kind: z.enum(["morning", "afternoon"]) },
+    async ({ kind }) => ({ content: [{ type: "text", text: await briefText(kind) }] }),
   );
 
   // ---- Lịch (D25). Chỉ sửa, xóa sự kiện có dấu owner do server gắn; sự kiện chủ tự tạo chỉ đọc. ----
@@ -553,9 +852,9 @@ function buildServer() {
 }
 
 // ---- HTTP: một đường /mcp, Bearer token, không giữ phiên ----
-function tokenMatches(header) {
+function tokenMatches(header, token = MCP_TOKEN) {
   const given = Buffer.from((header ?? "").replace(/^Bearer /, ""));
-  const expected = Buffer.from(MCP_TOKEN);
+  const expected = Buffer.from(token);
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
@@ -587,9 +886,35 @@ try {
   fatal(`Kiểm tra khi khởi động không đạt: ${err.message}`);
 }
 
+// /brief/* và /sync/*: token riêng BRIEF_TOKEN. Lỗi nghiệp vụ vẫn trả HTTP 200 kèm câu báo lỗi để job không ra kết quả rỗng.
+const BRIEF_ROUTES = {
+  "GET /brief/morning": () => briefText("morning"),
+  "GET /brief/afternoon": () => briefText("afternoon"),
+  "POST /sync/all": async (params) => {
+    const result = await serialized(() => syncAll(params.get("force") === "1"));
+    if (result.stopped) return result.stopped;
+    return params.get("quiet") === "1" ? "NO_REPLY" : syncLine(result); // quiet=1: thành công thì không có gì để gửi
+  },
+};
+
+async function handleBriefRoute(req, res, path, query) {
+  const route = BRIEF_ROUTES[`${req.method} ${path}`];
+  if (!BRIEF_TOKEN || !route) return send(res, 404, "not found");
+  if (!tokenMatches(req.headers.authorization, BRIEF_TOKEN)) return send(res, 401, "unauthorized");
+  const text = await route(new URLSearchParams(query));
+  console.log(`route=${path} ket_qua=ok`);
+  return send(res, 200, text);
+}
+
 createServer(async (req, res) => {
-  const path = (req.url ?? "").split("?")[0];
+  const [path, query = ""] = (req.url ?? "").split("?");
   if (path === "/healthz" && req.method === "GET") return send(res, 200, "ok");
+  if (path.startsWith("/brief/") || path.startsWith("/sync/")) {
+    return handleBriefRoute(req, res, path, query).catch(() => {
+      console.log(`route=${path} ket_qua=loi`);
+      if (!res.headersSent) send(res, 500, "error");
+    });
+  }
   if (path !== "/mcp") return send(res, 404, "not found");
   if (!tokenMatches(req.headers.authorization)) return send(res, 401, "unauthorized");
   if (req.method !== "POST") return send(res, 405, "method not allowed");
@@ -606,4 +931,4 @@ createServer(async (req, res) => {
   } catch {
     if (!res.headersSent) send(res, 400, "bad request");
   }
-}).listen(PORT, "0.0.0.0", () => console.log(`khai-mcp-google lắng nghe cổng ${PORT} (biểu: ${SHEET_MODE}, lịch: ${CAL_MODE})`));
+}).listen(PORT, "0.0.0.0", () => console.log(`khai-mcp-google lắng nghe cổng ${PORT} (biểu: ${SHEET_MODE}, lịch: ${CAL_MODE}, brief: ${BRIEF_TOKEN ? "bật" : "tắt"})`));
