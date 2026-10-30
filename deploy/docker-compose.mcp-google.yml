@@ -7,7 +7,7 @@ services:
     container_name: khai-mcp-google
     entrypoint: ["node", "/app/mcp-google/server.mjs"]
     user: "1000:1000"
-    restart: "no"
+    restart: unless-stopped
     env_file:
       - ${HOME}/projects/khai-phien-ban-so/secrets/mcp-google.env
     volumes:

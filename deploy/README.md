@@ -123,7 +123,7 @@ Ba job nhắc việc (G2-06d, anh Khải tạo ngày 29/10/2026, OpenClaw 2026.1
 ( umask 077; printf 'Authorization: Bearer %s\n' "$(grep '^BRIEF_TOKEN=' secrets/mcp-google.env | cut -d= -f2-)" > ~/.openclaw/brief-auth.txt )
 ```
 
-Lưu ý: đổi `BRIEF_TOKEN` thì phải tạo lại tệp này. Container `khai-mcp-google` có `restart: "no"`: sau khi máy khởi động lại phải `up -d --no-deps khai-mcp-google`, nếu không cả ba job in câu báo lỗi "⚠️".
+Lưu ý: đổi `BRIEF_TOKEN` thì phải tạo lại tệp này. Container `khai-mcp-google` có `restart: unless-stopped` (xem mục "Chính sách khởi động lại và chạy bù" bên dưới).
 
 Lệnh tạo job (ở `~/apps/openclaw`; cả ba `--tz Asia/Ho_Chi_Minh --exact --no-deliver`, chưa gắn `--announce` cho đến khi G2-02, G2-03 xong và C18 được chốt). Phần `|| echo` bảo đảm server dừng vẫn ra câu báo lỗi chứ không rỗng; `2>/dev/null` giữ `summary` không có nhãn `stderr:`:
 
@@ -142,6 +142,14 @@ $OC automations create --name "Đối chiếu lịch" --cron "30 6 * * 1-5" --tz
 ```
 
 Kết quả chạy tay 29/10/2026 (bảng thật đang rỗng): bản tin 1315 ms ra bốn mục "Không có"; nhắc 14:00 556 ms ra `NO_REPLY` (run không có `summary`, `diagnostics.summary` là `NO_REPLY`); đối chiếu 1246 ms ra cảnh báo biểu rỗng, định xóa 0 sự kiện. Xem lịch sử chạy bằng `automations runs`.
+
+Chính sách khởi động lại và chạy bù (G2-06e, 30/10/2026, OpenClaw 2026.10.3):
+
+- `khai-mcp-google` và `openclaw-gateway` đều `unless-stopped`: Docker tự bật lại sau khi máy khởi động lại, trừ container đã dừng bằng tay. Container đang chạy đã đổi bằng `docker update --restart unless-stopped khai-mcp-google` (không dừng container). Tệp `deploy/docker-compose.mcp-google.yml` đã đặt `restart: unless-stopped` cho khớp, để lần tạo lại (`--force-recreate`) giữ nguyên chính sách; nếu hai nơi lệch nhau thì lần tạo lại sẽ ghi đè theo tệp compose.
+- Dừng tạm: `docker stop khai-mcp-google` (Docker không tự bật lại). Cần bật lại: `docker compose -f docker-compose.yml -f ~/projects/khai-phien-ban-so/deploy/docker-compose.mcp-google.yml up -d --no-deps khai-mcp-google` (ở `~/apps/openclaw`). Trong lúc dừng, cả ba job in câu báo lỗi "⚠️".
+- Sau khi đổi `secrets/mcp-google.env` phải chạy `docker compose ps` (hoặc `docker logs khai-mcp-google`): server kiểm tra khởi động sai thì thoát mã 1 và Docker thử bật lại liên tục (trạng thái `Restarting`), các job vẫn in "⚠️".
+- Chạy bù: job `--command` chạy bù khi Gateway tắt qua giờ chạy. Thử ngày 30/10/2026: job thử đặt 08:05, dừng Gateway trước 08:05, bật lại khoảng 08:28; job chạy bù đúng một lần lúc 08:30:23 (khoảng 2 phút sau khi Gateway lên), status ok. Bản tin chạy bù mang nội dung của lúc chạy, không phải của giờ định. Chưa thử lỡ nhiều giờ hay nhiều ngày (ví dụ cả cuối tuần).
+- Độ dài `summary`: job thử in 8000 ký tự, `summary` lưu đủ (8021 byte kể cả nhãn), không bị cắt. Bản tin thật nhỏ hơn nhiều (mỗi mục tối đa 15 dòng).
 
 Checklist iPhone (chuông lịch không phải lớp chắc chắn; bản tin và nhắc việc qua kênh vẫn là lớp chính):
 
