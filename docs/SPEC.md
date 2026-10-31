@@ -45,6 +45,7 @@ Một trợ lý AI cá nhân giúp anh Khải:
 **Kênh**
 - Bot Zalo chính thức: kênh chính.
 - Telegram: kênh dự phòng; được dùng như bot Zalo, kể cả gửi văn bản thông thường để tiếp nhận (chủ đã chốt ngày 14/10/2026, chấp nhận việc Telegram không mã hóa đầu cuối). Văn bản mật không gửi qua kênh nào.
+- Zalo cá nhân (tài khoản phụ, plugin không chính thức): kênh bổ sung, chủ ra lệnh theo ID số, không thay bot Zalo chính thức (D34).
 - Cả hai kênh dùng chung một trợ lý và chung dữ liệu.
 - Chỉ tài khoản của chủ ra lệnh được (danh sách cho phép theo ID tài khoản, không theo lời tự xưng).
 - Trợ lý gửi chủ động được tới chủ (nhắc việc, bản tin). Telegram chỉ nhận tin chủ động khi bot Zalo gửi lỗi, không gửi song song (đã chốt D22).
@@ -185,7 +186,7 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 
 | Rủi ro | Ảnh hưởng | Biện pháp |
 |---|---|---|
-| Kênh Zalo cá nhân dùng thư viện không chính thức | Có thể hỏng khi Zalo thay đổi; tài khoản có thể bị tạm khóa | Chỉ dùng tài khoản phụ; Gói 2 không phụ thuộc kênh này |
+| Kênh Zalo cá nhân dùng thư viện không chính thức | Có thể hỏng khi Zalo thay đổi; tài khoản có thể bị tạm khóa | Chỉ dùng tài khoản phụ; Gói 2 không phụ thuộc kênh này; kênh bổ sung, không thay bot chính thức (D34) |
 | Telegram: tình trạng pháp lý chưa rõ; không mã hóa đầu cuối | Văn bản gửi qua Telegram có thể bị lộ nếu tài khoản bị chiếm | Chủ đã chấp nhận cho văn bản thông thường; bật xác thực hai lớp cho Telegram; không gửi văn bản mật |
 | Bóc tách sai thông tin văn bản (ảnh mờ, scan kém, chữ có dấu) | Ghi sai hạn, sai số ký hiệu | Bắt buộc chủ xác nhận trước khi lưu; trường không chắc đánh dấu "(cần kiểm tra)"; luôn có link tệp gốc |
 | Lỡ gửi văn bản mật | Vi phạm khoản 5, 6 Điều 5 Luật Bảo vệ bí mật nhà nước 2018 | Chủ tự kiểm soát; trợ lý dừng khi thấy dấu độ mật; xóa ngay tệp đã lỡ tải lên |
@@ -197,7 +198,7 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 | Trợ lý bị dẫn dắt bằng nội dung tin nhắn (prompt injection) | Ghi sai dữ liệu, tiết lộ thông tin | Chỉ nhận lệnh theo ID; xác nhận trước khi ghi; bộ câu thử mục 7 |
 | Máy tắt, mất điện, mất mạng | Không nhắc việc, không trả lời | Lịch trên Google Calendar vẫn báo; Gateway tự chạy lại; xét VPS (C7) |
 | OpenClaw đổi lệnh, cấu hình khi cập nhật | Hỏng cấu hình | Đối chiếu tài liệu, sao lưu trước khi cập nhật, ghi phiên bản vào `Ghi nhận` |
-| Trợ lý có công cụ chạy lệnh gốc của Codex không tắt được bằng cấu hình | Nếu bị dẫn dắt qua tin nhắn, có thể đọc, ghi trong container (gồm cấu hình OpenClaw) | Chưa nối kênh ngoài cho đến khi chốt C18; chỉ chủ ra lệnh; không đưa bí mật vào workspace |
+| Trợ lý có công cụ chạy lệnh gốc của Codex | Nếu bị dẫn dắt qua tin nhắn, có thể đọc, ghi trong container (gồm cấu hình OpenClaw) | Đã chặn exec, process, terminal ở agent main (D32); Codex app-server chưa siết; chỉ chủ ra lệnh, tắt nhóm; không đưa bí mật vào workspace; xem lại trước Gói 2C |
 
 ## 7. Bộ kiểm thử hồi quy
 
@@ -240,7 +241,7 @@ Dùng cho nghiệm thu Gói 1 (câu làm được trên Control UI) và Gói 3 (
 | CV4 | Công việc | "Còn việc gì?" (có sẵn một việc [TEST] hạn đã qua) | Khớp bảng tính; chỉ liệt kê việc không phải `Đã xong`, `Hủy`; việc quá hạn (Hạn hoàn thành < hôm nay) lên đầu |
 | CV5 | Công việc | Đánh dấu xong một việc [TEST] | `status` = `Đã xong`, có dòng `log` (`action`=`doi_trang_thai`) |
 | CV6 | Công việc | Chủ sửa tay Hạn hoặc Trạng thái của một dòng trên Sheets rồi hỏi lại | Trả lời theo dữ liệu mới; Ngày nhắc việc tự tính lại; không có dòng `log` cho lần sửa tay |
-| CV7 | Công việc | Thêm qua Telegram, xem qua Zalo | Hai kênh cùng dữ liệu. Kiểm chứng ở G2-07 (G2-02, G2-03 còn bị C18, C19 chặn) |
+| CV7 | Công việc | Thêm qua Telegram, xem qua Zalo | Hai kênh cùng dữ liệu. Kiểm chứng ở G2-07 (G2-02a/b/c và G2-03 làm theo thứ tự trong tasks.md, điều kiện theo D32) |
 | LH1 | Lịch hẹn | Đặt lịch [TEST] rồi xác nhận | Sự kiện đúng giờ trên lịch "Công việc"; điện thoại báo theo thông báo mặc định của lịch (có giờ: 30 phút trước), công cụ không đặt nhắc riêng |
 | LH2 | Lịch hẹn | Đặt lịch [TEST] trùng giờ | Cảnh báo trùng trước khi tạo |
 | LH3 | Lịch hẹn | Dời, hủy lịch [TEST] | Hỏi xác nhận rồi mới làm |
