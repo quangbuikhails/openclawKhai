@@ -219,3 +219,38 @@ bash scripts/dong-bo-workspace.sh
 ```
 
 Sau đó mở phiên mới trên Control UI (dấu + cạnh PHIÊN) rồi chạy danh sách kiểm chứng G2-06c trong `docs/tasks.md`. Hoàn tác: chép lại `~/.openclaw/openclaw.json.truoc-g206c` (hoặc đặt lại bộ lọc cũ `sheet_*`... theo tài liệu), đồng bộ lại workspace từ commit trước.
+
+## Tắt khẩn cấp kênh Telegram
+
+Anh Khải tự làm. Lệnh OpenClaw chạy trong `~/apps/openclaw`. Có ba mức, từ nhẹ đến nặng; mỗi mức ghi rõ đã kiểm chứng chưa.
+
+### Mức 1: tắt tạm (đã kiểm chứng 02/11/2026, OpenClaw 2026.10.3)
+
+```bash
+cd ~/apps/openclaw
+docker compose exec -T openclaw-gateway node dist/index.js config set channels.telegram.enabled false --strict-json < /dev/null
+```
+
+Dấu `<` ở cuối lệnh là chuyển hướng stdin thật (để `docker compose exec` không treo chờ nhập), không phải chỗ điền giá trị; gõ nguyên văn.
+
+Trạng thái chuyển thành `disabled, configured, stopped` và bot không trả lời. Token và danh sách cho phép giữ nguyên. Bật lại bằng cùng lệnh với `true` thay cho `false`, rồi kiểm tra:
+
+```bash
+docker compose exec -T openclaw-gateway node dist/index.js channels status --probe < /dev/null
+```
+
+Kỳ vọng: `enabled, configured, running, connected`.
+
+### Mức 2: cắt hẳn khi nghi lộ token (đã làm thật ngày 31/10/2026)
+
+1. Gửi `/revoke` cho @BotFather, chọn bot. Token cũ hết hiệu lực ngay.
+2. Ghi token mới vào `~/.openclaw/telegram-token.txt` bằng `read -rs` (không gõ token vào lệnh, không dán vào chat).
+
+### Mức 3: gỡ tài khoản kênh (chưa thử, suy luận từ trợ giúp; chưa kiểm chứng hành vi)
+
+- `channels remove --channel telegram`: chỉ tắt.
+- Thêm `--delete`: xóa mục cấu hình, không hỏi lại.
+
+Sao lưu trước: `cp -p ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.truoc-go-telegram`.
+
+Tin gửi lúc kênh tắt có được xử lý lại sau khi bật hay không: chưa kiểm chứng.
