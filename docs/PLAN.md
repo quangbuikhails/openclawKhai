@@ -77,6 +77,7 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 | C15 | Giới hạn thư mục trợ lý được đọc, gửi tệp (`tools.fs.workspaceOnly`) | 2B | Mặc định `false`: trợ lý gửi được mọi tệp nó đọc được. Đề xuất: `true` để chỉ gửi tệp trong workspace và thư mục tạm |
 | C16 | Cách mở web app từ điện thoại | 4 | Phương án: (a) mạng riêng ảo Tailscale giữa máy chạy trợ lý và điện thoại, không mở cổng nào ra Internet (đề xuất); (b) đường hầm Cloudflare Tunnel kèm lớp đăng nhập Cloudflare Access; (c) mở cổng trên router: không dùng. Chi tiết, chi phí cần kiểm chứng khi làm |
 | C17 | Đọc tệp Word, PDF scan trong OpenClaw: dùng khả năng đọc tệp sẵn có hay script chuyển đổi riêng | 2C | Cần khảo sát ở G2C-01; bot Zalo mặc định nhận tệp ≤ 5 MB |
+| C25 | Plugin cho Zalo cá nhân (G2-02c) | 2 | Phương án: (a) `@openclaw/zalouser@2026.10.3` (OpenClaw phát hành, phụ thuộc zca-js 2.2.0, chưa đọc mã, gói ~16 MB); (b) `openclaw-zalo-connect` (plugin cộng đồng, MIT, cũng dùng zca-js, đang chạy ở bot cũ của anh Khải, README ghi cần OpenClaw >=2026.5.7, chưa biết tương thích 2026.10.3, có denyFrom và chống tiêm lệnh). Chưa chọn; chốt trước G2-02c, sau khi đọc mã cả hai |
 
 ## 4. Biểu theo dõi công việc (đã chốt D14)
 
