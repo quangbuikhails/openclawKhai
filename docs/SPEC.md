@@ -48,7 +48,7 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - Zalo cá nhân (tài khoản phụ, plugin không chính thức): kênh bổ sung, chủ ra lệnh theo ID số, không thay bot Zalo chính thức (D34).
 - Cả hai kênh dùng chung một trợ lý và chung dữ liệu.
 - Chỉ tài khoản của chủ ra lệnh được (danh sách cho phép theo ID tài khoản, không theo lời tự xưng).
-- Trợ lý gửi chủ động được tới chủ (nhắc việc, bản tin). Telegram chỉ nhận tin chủ động khi bot Zalo gửi lỗi, không gửi song song (đã chốt D22).
+- Trợ lý gửi chủ động được tới chủ (nhắc việc, bản tin). Telegram chỉ nhận tin chủ động khi bot Zalo gửi lỗi, không gửi song song (đã chốt D22). Tin Telegram lúc đó là thông báo lỗi giao tin, không kèm nội dung bản tin (D35).
 
 **Công việc (Google Sheets – biểu theo dõi)**
 - Dữ liệu lưu trên biểu theo dõi 14 cột (PLAN.md mục 4): STT, Ngày nhận, Tên văn bản, Số ký hiệu, Cơ quan ban hành, Nội dung cần xử lý, Người phụ trách, Hạn hoàn thành, Ưu tiên, Trạng thái, Ghi chú, Link tài liệu, Thời hạn yêu cầu trong văn bản, Ngày nhắc việc. Việc không có văn bản (giao miệng, tự đặt) cũng ghi vào biểu, để trống các cột văn bản.
@@ -85,7 +85,7 @@ Một trợ lý AI cá nhân giúp anh Khải:
 - [ ] Chủ sửa trực tiếp một dòng trên Sheets: trợ lý trả lời theo dữ liệu mới.
 - [ ] Thêm lịch hẹn: sự kiện xuất hiện đúng giờ trên Google Calendar trên điện thoại; lịch trùng giờ được cảnh báo.
 - [ ] Chuông nhắc trước giờ hẹn (Calendar) đúng giờ; bản tin đầu ngày 07:30 và nhắc 14:00 (tin nhắn, kiểm ở NV1b) đúng giờ, đúng nội dung, trong 3 ngày chạy thử liên tục.
-- [ ] Tạm ngắt bot Zalo: lời nhắc vẫn tới qua Telegram theo cách đã chốt ở C4.
+- [ ] Bot Zalo giao tin lỗi hoặc tạm ngắt: Telegram nhận được thông báo lỗi giao tin (D35); nhắn Telegram "Hôm nay có gì?" xem được bản tin.
 - [ ] Câu lệnh mơ hồ thì trợ lý hỏi lại.
 
 ### Gói 2C — Tiếp nhận văn bản giao việc
@@ -247,7 +247,7 @@ Dùng cho nghiệm thu Gói 1 (câu làm được trên Control UI) và Gói 3 (
 | LH3 | Lịch hẹn | Dời, hủy lịch [TEST] | Hỏi xác nhận rồi mới làm |
 | LH4 | Lịch hẹn | "Mai có lịch gì?" | Khớp lịch "Công việc" |
 | NV1a | Nhắc việc | Job thử `--command` chạy theo lịch (G2-06, khi chưa nối kênh) | Chạy đúng giờ (`runAtIso`), `summary` trong `automations runs` đúng nội dung bản tin; với `--no-deliver` thì `deliveryStatus` là `not-requested`; lỗi đọc Google thì báo lỗi, không có bản tin rỗng |
-| NV1b | Nhắc việc | Tin nhắc tới kênh thật (G2-07, sau khi G2-02, G2-03 xong) | Tin đến kênh của chủ đúng giờ; khi bot Zalo lỗi thì Telegram nhận được thông báo (nội dung theo cách chốt ở G2-03) |
+| NV1b | Nhắc việc | Tin nhắc tới kênh thật (G2-07, sau khi G2-02, G2-03 xong) | Tin đến kênh của chủ đúng giờ; khi bot Zalo lỗi thì Telegram nhận được thông báo (thông báo lỗi giao tin theo D35, không kèm nội dung bản tin) |
 | NV2 | Nhắc việc | Việc [TEST] có Hạn hoàn thành lần lượt rơi vào từng thứ trong tuần | Cột Ngày nhắc việc = hạn − 3 ngày, rơi thứ Bảy hoặc Chủ nhật thì lùi về thứ Sáu: hạn thứ Hai → thứ Sáu tuần trước; thứ Ba (hạn − 3 là thứ Bảy) → thứ Sáu; thứ Tư (hạn − 3 là Chủ nhật) → thứ Sáu; thứ Năm → thứ Hai; thứ Sáu → thứ Ba; thứ Bảy → thứ Tư; Chủ nhật → thứ Năm. Ví dụ hạn 26/10/2026 (thứ Hai), 27/10, 28/10 đều nhắc 23/10/2026. Task G2-04 chỉ kiểm giá trị cột; tin nhắc đến kênh kiểm ở G2-07 (NV1b) |
 | NV3 | Nhắc việc | Việc [TEST] chỉ có Thời hạn trong văn bản; thêm việc [TEST] có cả hai loại hạn | Chỉ có Thời hạn trong văn bản: Ngày nhắc tính theo đó. Có cả hai: tính theo Hạn hoàn thành |
 | NV4 | Nhắc việc | Chạy bản tin 07:30 (job `--command`) khi có việc [TEST] hạn hôm nay, việc có Ngày nhắc việc là hôm nay, việc quá hạn và một lịch hẹn [TEST] hôm nay. Rồi tạm dừng server Google và chạy lại. Chạy nhắc 14:00 khi không có việc hạn hôm nay | Bản tin có lịch hôm nay kèm giờ và đủ ba mục Hạn hôm nay, Đến ngày nhắc, Quá hạn, chỉ gồm trích yếu, số ký hiệu, hạn. Khi server Google dừng thì bản tin là câu báo lỗi, không rỗng. Nhắc 14:00 không có việc thì không gửi tin (`NO_REPLY`) |
