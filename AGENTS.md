@@ -17,7 +17,7 @@ tệp gốc trên Google Drive, lịch trên Google Calendar; nhắc việc ch�
 
 - Windows + Docker Desktop (WSL2); thao tác trong Ubuntu WSL.
 - OpenClaw cài riêng tại `~/apps/openclaw`, KHÔNG nằm trong repo này. Repo chỉ chứa cấu hình mẫu, workspace của trợ lý, skill, script, web app.
-- Lệnh OpenClaw khi Gateway đang chạy: đứng trong `~/apps/openclaw`, gõ `docker compose exec openclaw-gateway node dist/index.js <lệnh>` (đã kiểm chứng với `models list`). `docker compose run --rm openclaw-cli <lệnh>` từng bị chặn ở lần cài đầu (GatewayLockNamespaceError), chưa kiểm chứng lại.
+- Lệnh OpenClaw khi Gateway đang chạy: đứng trong `~/apps/openclaw`, gõ `docker compose exec openclaw-gateway node dist/index.js <lệnh>` (đã kiểm chứng với `models list`). `docker compose run --rm openclaw-cli <lệnh>` từng bị chặn ở lần cài đầu (GatewayLockNamespaceError); ngày 05/11/2026 chạy được với `automations runs` khi Gateway đang chạy, có cảnh báo orphan `khai-mcp-google`: không dùng `--remove-orphans`.
 - Kiểm tra Gateway: `curl -fsS http://127.0.0.1:28789/healthz`. Cổng 18789 và container `openclaw-bot`, `9router-bot` là việc khác của anh Khải: không dừng, không xóa, không chạy lệnh Docker trong thư mục của chúng; không sửa `COMPOSE_PROJECT_NAME=khai-pbs` trong `.env` (PLAN.md D19).
 - Repo đặt trong ổ Ubuntu WSL (ví dụ `~/projects/khai-phien-ban-so`), không đặt ở `/mnt/c/...`.
 - OpenClaw đổi lệnh và khóa cấu hình thường xuyên: lệnh hoặc khóa chưa từng dùng trong repo phải đối chiếu https://docs.openclaw.ai trước; không đoán.
