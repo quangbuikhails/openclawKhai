@@ -63,6 +63,7 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 | D33 | C19: bot Zalo cũ openclaw-bot dùng Zalo cá nhân, anh Khải vẫn dùng hằng ngày; không đụng. Bot chính thức của dự án tạo ở bot.zaloplatforms.com, token riêng; Zalo cá nhân của dự án là tài khoản phụ riêng (điện thoại phụ), không dùng tài khoản chính hay tài khoản của openclaw-bot | Bot của dự án phải riêng, không dùng chung token hay tài khoản với bot cũ | Anh Khải chốt 31/10/2026 (thay C19) |
 | D34 | Nới D5: Zalo cá nhân (tài khoản phụ) được dùng sớm làm kênh bổ sung thứ ba ở Gói 2, thêm vào chứ không thay bot chính thức (D4 giữ nguyên); việc trả lời thay người khác vẫn để Gói 3 | Anh Khải muốn dùng Zalo cá nhân vì tiện; bot chính thức vẫn là lớp ổn định cho nhắc việc (D24). Rủi ro: thư viện không chính thức, tài khoản phụ có thể bị khóa, phiên đăng nhập nằm trong trạng thái OpenClaw (cùng khu vực C18) | Anh Khải chốt 31/10/2026 |
 | D35 | C26: khi bot Zalo giao tin lỗi, Telegram nhận thông báo lỗi giao tin (tên job, giờ chạy), không kèm nội dung bản tin; chủ nhắn Telegram "Hôm nay có gì?" để xem bản tin. Không gửi song song. Cấu hình mỗi job giao tin: `--failure-alert --failure-alert-channel telegram --failure-alert-to <ID Telegram> --failure-alert-after 1` | Cơ chế báo lỗi của OpenClaw chỉ nêu nguyên nhân, không chép nội dung; dự phòng thật cho hạn việc là sự kiện [Nhắc], [Hạn] trên Calendar (D17); không thêm mã chưa kiểm chứng. Kiểm 02/11/2026 (OpenClaw 2026.10.3): Zalo trả lỗi chat_id sai thì Telegram nhận thông báo | Anh Khải chốt 02/11/2026 (C26) |
+| D36 | G2-02c (Zalo cá nhân, tài khoản phụ) hoãn sang sau khi Gói 4 nghiệm thu; nghiệm thu Gói 2 không gồm kênh này. Thứ tự còn lại: 2C → 4 → G2-02c → 2B → 3. D34 giữ nguyên (Zalo cá nhân là kênh bổ sung), chỉ lùi thời điểm; C25 chốt khi làm G2-02c | SPEC ghi Gói 2 không phụ thuộc kênh này; bot Zalo chính thức và Telegram đủ dùng; ưu tiên tiếp nhận văn bản (2C) và web app (4) | Anh Khải chốt 10/11/2026 |
 
 ## 3. Mục cần chốt
 
@@ -78,7 +79,7 @@ Web app (Gói 4: Biểu, Lịch, Kanban) ─► Google Sheets / Calendar (đọc
 | C15 | Giới hạn thư mục trợ lý được đọc, gửi tệp (`tools.fs.workspaceOnly`) | 2B | Mặc định `false`: trợ lý gửi được mọi tệp nó đọc được. Đề xuất: `true` để chỉ gửi tệp trong workspace và thư mục tạm |
 | C16 | Cách mở web app từ điện thoại | 4 | Phương án: (a) mạng riêng ảo Tailscale giữa máy chạy trợ lý và điện thoại, không mở cổng nào ra Internet (đề xuất); (b) đường hầm Cloudflare Tunnel kèm lớp đăng nhập Cloudflare Access; (c) mở cổng trên router: không dùng. Chi tiết, chi phí cần kiểm chứng khi làm |
 | C17 | Đọc tệp Word, PDF scan trong OpenClaw: dùng khả năng đọc tệp sẵn có hay script chuyển đổi riêng | 2C | Cần khảo sát ở G2C-01; bot Zalo mặc định nhận tệp ≤ 5 MB |
-| C25 | Plugin cho Zalo cá nhân (G2-02c) | 2 | Phương án: (a) `@openclaw/zalouser@2026.10.3` (OpenClaw phát hành, phụ thuộc zca-js 2.2.0, chưa đọc mã, gói ~16 MB); (b) `openclaw-zalo-connect` (plugin cộng đồng, MIT, cũng dùng zca-js, đang chạy ở bot cũ của anh Khải, README ghi cần OpenClaw >=2026.5.7, chưa biết tương thích 2026.10.3, có denyFrom và chống tiêm lệnh). Chưa chọn; chốt trước G2-02c, sau khi đọc mã cả hai |
+| C25 | Plugin cho Zalo cá nhân (G2-02c) | 2 | Phương án: (a) `@openclaw/zalouser@2026.10.3` (OpenClaw phát hành, phụ thuộc zca-js 2.2.0, chưa đọc mã, gói ~16 MB); (b) `openclaw-zalo-connect` (plugin cộng đồng, MIT, cũng dùng zca-js, đang chạy ở bot cũ của anh Khải, README ghi cần OpenClaw >=2026.5.7, chưa biết tương thích 2026.10.3, có denyFrom và chống tiêm lệnh). Chưa chọn; chốt trước G2-02c (hoãn sau Gói 4, D36), sau khi đọc mã cả hai |
 
 ## 4. Biểu theo dõi công việc (đã chốt D14)
 
@@ -148,6 +149,7 @@ Quy ước:
 
 | Ngày | Nhãn git | Phiên bản OpenClaw | Thay đổi | Kiểm tra 7.3 |
 |---|---|---|---|---|
+| 10/11/2026 | `goi2-v1` | 2026.10.3 (59cb447) | Nghiệm thu Gói 2: bot Zalo chính thức, Telegram dự phòng, biểu theo dõi, lịch hẹn, ba job nhắc việc (G2-02b, G2-03, G2-04 đến G2-07) | Đạt (10/11/2026) |
 | 20/10/2026 | (chưa gắn nhãn) | 2026.10.3 | G2-04: server MCP `google`, skill `cong-viec` | Đạt (16 giây) |
 | 15/10/2026 | (chưa gắn nhãn) | 2026.10.3 (59cb447), `sha256:70b8dbd23f8d…` | Cài lần đầu theo D19 (G1-02); mô hình mặc định `openai/gpt-6-astra` | Chưa áp dụng |
 
