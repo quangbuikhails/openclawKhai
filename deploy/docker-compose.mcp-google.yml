@@ -13,7 +13,8 @@ services:
     volumes:
       # Mount vào trong /app để ESM tìm được /app/node_modules (không dùng NODE_PATH).
       - ${HOME}/projects/khai-phien-ban-so/mcp-google:/app/mcp-google:ro
-      - ${HOME}/projects/khai-phien-ban-so/secrets/google-sa.json:/run/secrets/google-sa.json:ro
+      # Gắn thư mục (không gắn tệp đơn lẻ): sự cố 03/11 và 10/11 khi Docker tự khởi động container (G2-08).
+      - ${HOME}/projects/khai-phien-ban-so/secrets/google:/run/secrets:ro
     read_only: true
     tmpfs:
       - /tmp
