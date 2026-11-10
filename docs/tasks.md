@@ -123,6 +123,7 @@
 - [ ] **G2-08 Sửa lỗi `khai-mcp-google` thoát sau khi khởi động lại** — sự cố 03/11 và 10/11 (mã 127, lỗi gắn tệp `google-sa.json` khi Docker tự khởi động container).
   - Làm: tìm nguyên nhân (`docker inspect`, `docker logs`, cách gắn `secrets/` trong `deploy/docker-compose.mcp-google.yml`); trình 2–3 phương án kèm ưu, nhược (ví dụ gắn thư mục `secrets/` chỉ đọc thay cho gắn tệp đơn lẻ; bước tự kiểm tra sau khi bật máy) và chờ anh Khải duyệt; không thêm image, package.
   - Kiểm chứng: tắt và mở lại Ubuntu (hoặc Docker Desktop) hai lần: `khai-mcp-google` tự `Up`, log "biểu: prod, lịch: prod, brief: bật", post-deploy-check ĐẠT, không phải chạy lệnh tạo lại tay.
+  - Ghi nhận (chưa xong G2-08; 10/11/2026; OpenClaw 2026.10.3, chờ kiểm chứng khởi động lại hai lần): anh Khải duyệt phương án A. Đã chuyển `secrets/google-sa.json` sang `secrets/google/google-sa.json` (thư mục 700, tệp 600; uid máy 1000 khớp user container), compose gắn thư mục `secrets/google` vào `/run/secrets` chỉ đọc, tạo lại container một lần: `Up (healthy)`, log "biểu: prod, lịch: prod, brief: bật", post-deploy-check ĐẠT. Nguyên nhân gốc chưa chứng minh được vì container lỗi đã bị tạo lại nên mất `State.Error`; bước 0 (chụp `docker inspect`, `docker logs` trước khi tạo lại) ghi ở `deploy/README.md`.
 
 _(Chi tiết "Làm" và "Kiểm chứng" của từng task Gói 2 được bổ sung sau khi G2-01 được duyệt.)_
 
@@ -253,7 +254,7 @@ _(Lập danh sách task khi bắt đầu gói.)_
 - (Từ G2-07) `deploy/README.md` còn ghi ba job chưa gắn `--announce`; cập nhật lệnh mẫu và nêu cờ báo lỗi sang Telegram.
 - (Từ G2-07) Bốn bản `mcp-google.env.*` trong `tmp/` xóa sau khi G2-07 xong.
 - `Sự cố 03/11/2026:` sau khi bật máy, container `khai-mcp-google` thoát ngay (mã 127), lỗi gắn tệp `google-sa.json` lúc Docker tự khởi động · `Nguyên nhân:` chưa rõ vì sao lần gắn tệp lúc tự khởi động bị lỗi; tệp `secrets/google-sa.json` còn nguyên (2367 byte) · `Đã khắc phục:` trong `~/apps/openclaw` chạy `docker compose -f docker-compose.yml -f ~/projects/khai-phien-ban-so/deploy/docker-compose.mcp-google.yml up -d --no-deps --force-recreate khai-mcp-google`; `docker logs --tail 5 khai-mcp-google` thấy "biểu: prod, lịch: prod, brief: bật" · `Task mới:` không cần; ghi cách xử lý vào `deploy/README.md` cùng lượt cập nhật lệnh `--announce`.
-- (Từ G2-07) Quyền tệp `secrets/google-sa.json` đang `-rw-r--r--` (644); nên siết về 600, chưa làm vì chưa rõ container có đọc được không.
+- (Từ G2-07) Quyền tệp Service Account: đã siết 600 (thư mục `secrets/google` 700) ngày 10/11/2026 trong G2-08; container đọc được (log lên bình thường).
 - (Từ G2-07) Ở bảng `bieu`, cột Hạn hoàn thành của hai dòng thử STT 3 và 4 hiển thị số thô (46333, 46329), hai dòng STT 1 và 2 hiển thị đúng ngày; chưa rõ do cách nhập thử hay do công cụ ghi. Kiểm lại khi có việc thật đầu tiên, đồng thời xem STT việc thật đầu tiên sau khi bảng rỗng bắt đầu từ 1 hay tiếp số cũ.
 - (Từ G2-07) Gateway tự lên sau khi bật máy dù cấu hình `restart: "no"`; chưa rõ cơ chế.
 - (Từ G2-07) 05/11/2026: `tasks.md` cập nhật tay trong VS Code vì chưa mở được Codex trên máy; lệch quy ước, ghi để minh bạch.

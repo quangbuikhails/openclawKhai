@@ -125,7 +125,7 @@ Ba job nhắc việc (G2-06d, anh Khải tạo ngày 29/10/2026, OpenClaw 2026.1
 
 Lưu ý: đổi `BRIEF_TOKEN` thì phải tạo lại tệp này. Container `khai-mcp-google` có `restart: unless-stopped` (xem mục "Chính sách khởi động lại và chạy bù" bên dưới).
 
-Lệnh tạo job (ở `~/apps/openclaw`; cả ba `--tz Asia/Ho_Chi_Minh --exact --no-deliver`, chưa gắn `--announce` cho đến khi G2-02, G2-03 xong và C18 được chốt). Phần `|| echo` bảo đảm server dừng vẫn ra câu báo lỗi chứ không rỗng; `2>/dev/null` giữ `summary` không có nhãn `stderr:`:
+Lệnh tạo job (ở `~/apps/openclaw`; cả ba `--tz Asia/Ho_Chi_Minh --exact --no-deliver`, lệnh mẫu dưới đây chưa có `--announce`, phần gắn gửi tin xem ngay sau khối lệnh). Phần `|| echo` bảo đảm server dừng vẫn ra câu báo lỗi chứ không rỗng; `2>/dev/null` giữ `summary` không có nhãn `stderr:`:
 
 ```bash
 cd ~/apps/openclaw
@@ -141,11 +141,20 @@ $OC automations create --name "Đối chiếu lịch" --cron "30 6 * * 1-5" --tz
   --command 'curl -fsS --max-time 60 -X POST -H @/home/node/.openclaw/brief-auth.txt "http://khai-mcp-google:3000/sync/all?quiet=1" 2>/dev/null || echo "⚠️ Không đồng bộ được lịch: máy chủ Google không phản hồi."'
 ```
 
+Gắn gửi tin cho Bản tin sáng và Nhắc việc 14:00 (G2-06d, 02/11/2026; Đối chiếu lịch giữ `--no-deliver`): `automations edit <id> --announce --channel zalo --to <ID_ZALO> --failure-alert --failure-alert-channel telegram --failure-alert-to <ID_TELEGRAM> --failure-alert-after 1`. ID Zalo là số, không cần tiền tố; `<ID_ZALO>`, `<ID_TELEGRAM>` là giữ chỗ, giá trị thật không ghi vào repo. Nếu Zalo giao lỗi thì Telegram nhận thông báo "delivery failed" kèm tên job và giờ chạy, không kèm nội dung bản tin.
+
 Kết quả chạy tay 29/10/2026 (bảng thật đang rỗng): bản tin 1315 ms ra bốn mục "Không có"; nhắc 14:00 556 ms ra `NO_REPLY` (run không có `summary`, `diagnostics.summary` là `NO_REPLY`); đối chiếu 1246 ms ra cảnh báo biểu rỗng, định xóa 0 sự kiện. Xem lịch sử chạy bằng `automations runs`.
 
 Chính sách khởi động lại và chạy bù (G2-06e, 30/10/2026, OpenClaw 2026.10.3):
 
 - `khai-mcp-google` và `openclaw-gateway` đều `unless-stopped`: Docker tự bật lại sau khi máy khởi động lại, trừ container đã dừng bằng tay. Container đang chạy đã đổi bằng `docker update --restart unless-stopped khai-mcp-google` (không dừng container). Tệp `deploy/docker-compose.mcp-google.yml` đã đặt `restart: unless-stopped` cho khớp, để lần tạo lại (`--force-recreate`) giữ nguyên chính sách; nếu hai nơi lệch nhau thì lần tạo lại sẽ ghi đè theo tệp compose.
+- Sự cố sau khi bật máy (03/11 và 10/11/2026, G2-08): `khai-mcp-google` thoát mã 127 khi Docker tự khởi động, trong khi Gateway và hai bot khác tự lên bình thường. Nguyên nhân chưa chứng minh được (nghi ổ Ubuntu WSL chưa sẵn sàng khi gắn tệp đơn lẻ `google-sa.json`); đã đổi sang gắn thư mục `secrets/google`. Nếu còn lỗi, **bước 0 trước khi tạo lại container** (để giữ bằng chứng):
+  ```bash
+  docker ps -a --filter name=khai-mcp-google --format '{{.Status}}'
+  docker inspect khai-mcp-google --format '{{.State.ExitCode}} | {{.State.Error}}'
+  docker logs --tail 20 khai-mcp-google
+  ```
+  Ghi kết quả vào `docs/tasks.md` (mục Phát sinh), rồi mới chạy ở `~/apps/openclaw`: `docker compose -f docker-compose.yml -f ~/projects/khai-phien-ban-so/deploy/docker-compose.mcp-google.yml up -d --no-deps --force-recreate khai-mcp-google`. Không dùng `--remove-orphans`. Xác nhận bằng `docker logs --tail 5 khai-mcp-google` ("biểu: prod, lịch: prod, brief: bật") và `bash scripts/post-deploy-check.sh`.
 - Dừng tạm: `docker stop khai-mcp-google` (Docker không tự bật lại). Cần bật lại: `docker compose -f docker-compose.yml -f ~/projects/khai-phien-ban-so/deploy/docker-compose.mcp-google.yml up -d --no-deps khai-mcp-google` (ở `~/apps/openclaw`). Trong lúc dừng, cả ba job in câu báo lỗi "⚠️".
 - Sau khi đổi `secrets/mcp-google.env` phải chạy `docker compose ps` (hoặc `docker logs khai-mcp-google`): server kiểm tra khởi động sai thì thoát mã 1 và Docker thử bật lại liên tục (trạng thái `Restarting`), các job vẫn in "⚠️".
 - Chạy bù: job `--command` chạy bù khi Gateway tắt qua giờ chạy. Thử ngày 30/10/2026: job thử đặt 08:05, dừng Gateway trước 08:05, bật lại khoảng 08:28; job chạy bù đúng một lần lúc 08:30:23 (khoảng 2 phút sau khi Gateway lên), status ok. Bản tin chạy bù mang nội dung của lúc chạy, không phải của giờ định. Chưa thử lỡ nhiều giờ hay nhiều ngày (ví dụ cả cuối tuần).
@@ -161,7 +170,7 @@ Chuyển lịch từ test sang thật (G2-05, 28/10/2026): (1) chia sẻ lịch 
 
 Anh Khải tự làm (không dán khóa, token vào chat hay repo):
 
-1. Tạo `secrets/google-sa.json` (khóa Service Account) và `secrets/mcp-google.env` theo mẫu cuối `deploy/.env.example`. Container chạy user 1000:1000: `chmod 600` đủ nếu uid máy là 1000 (`id -u`).
+1. Tạo `secrets/google/google-sa.json` (khóa Service Account) và `secrets/mcp-google.env` theo mẫu cuối `deploy/.env.example`. Container chạy user 1000:1000: nếu uid máy là 1000 (`id -u`) thì `chmod 700 secrets/google` và `chmod 600 secrets/google/google-sa.json secrets/mcp-google.env`. Compose gắn thư mục `secrets/google` (chỉ đọc) vào `/run/secrets`, không gắn tệp đơn lẻ.
 2. Xem trước cấu hình ghép, không khởi động gì:
 
    ```bash
@@ -189,7 +198,7 @@ Anh Khải tự làm (không dán khóa, token vào chat hay repo):
 
    Lấy tên công cụ thực tế bằng `mcp probe` hoặc `mcp doctor <tên> --probe`.
 
-Hoàn tác: `mcp unset <tên>` (hoặc chép lại `openclaw.json.truoc-nhom11`), rồi `docker compose -f … -f … rm -sf khai-mcp-google`; xóa `secrets/mcp-google.env`, `secrets/google-sa.json` và thu hồi khóa trong Google Cloud. Không xóa volume.
+Hoàn tác: `mcp unset <tên>` (hoặc chép lại `openclaw.json.truoc-nhom11`), rồi `docker compose -f … -f … rm -sf khai-mcp-google`; xóa `secrets/mcp-google.env`, `secrets/google/` và thu hồi khóa trong Google Cloud. Không xóa volume.
 
 ## Lọc công cụ MCP và đồng bộ workspace cho G2-06c (anh Khải tự làm)
 
