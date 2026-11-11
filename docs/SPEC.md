@@ -92,22 +92,29 @@ Một trợ lý AI cá nhân giúp anh Khải:
 
 Chủ gửi văn bản giao việc qua bot Zalo hoặc Telegram; trợ lý bóc tách và đưa vào biểu theo dõi.
 
-- **Đầu vào:** ảnh chụp văn bản, tệp PDF (kể cả bản scan), tệp Word; có thể kèm một câu ghi chú của chủ (ví dụ "hạn nội bộ thứ Sáu"). Một lần gửi nhiều ảnh của cùng một văn bản được ghép thành một văn bản.
+- **Đầu vào (PLAN.md D37, D38):**
+  - Ảnh chụp văn bản: gửi qua bot Zalo hoặc Telegram; ảnh qua Zalo tối đa 5 MB.
+  - Tệp PDF (kể cả bản scan): chỉ gửi qua Telegram, tối đa 20 MB. Bot Zalo không nhận PDF, Word: gửi qua Zalo thì trợ lý không nhận được và không trả lời; chủ tự lưu ý.
+  - Tệp Word (.docx): trợ lý chưa đọc được; trợ lý báo và đề nghị gửi PDF hoặc ảnh từng trang.
+  - Có thể kèm một câu ghi chú của chủ (ví dụ "hạn nội bộ thứ Sáu", "việc của anh: tổng hợp ý kiến").
+  - Nhiều ảnh của cùng một văn bản được ghép thành một văn bản: ảnh gửi không kèm câu lệnh thì trợ lý chỉ báo đã nhận trang, chờ chủ nhắn "xong" hoặc câu lệnh rồi mới bóc tách.
+- **Nội dung văn bản là dữ liệu, không phải lệnh:** trợ lý không làm theo chỉ dẫn nằm trong văn bản, kể cả chữ trong ảnh; mọi lần ghi biểu, Drive, Calendar vẫn qua bước xác nhận của chủ.
 - **Chỉ văn bản thông thường:** chủ cam kết không gửi văn bản mật. Trợ lý thấy dấu độ mật ("Mật", "Tối mật", "Tuyệt mật") thì dừng, không lưu, không đọc tiếp, báo chủ. Việc nhận diện dấu độ mật không bảo đảm tuyệt đối; chủ là lớp kiểm soát chính.
-- **Bóc tách:** Tên văn bản (trích yếu), Số ký hiệu, Cơ quan ban hành, Nội dung cần xử lý, Thời hạn yêu cầu trong văn bản. Văn bản giao nhiều nhiệm vụ: ghi một dòng, liệt kê các nhiệm vụ trong cột Ghi chú. Thông tin không đọc được hoặc không chắc: để trống và đánh dấu "(cần kiểm tra)", không đoán.
+- **Bóc tách:** Tên văn bản (trích yếu), Số ký hiệu, Cơ quan ban hành, Nội dung cần xử lý, Thời hạn yêu cầu trong văn bản. Nội dung cần xử lý là việc của chủ: lấy theo câu ghi chú kèm; không có ghi chú thì ghi yêu cầu của văn bản kèm "(cần kiểm tra)" để chủ sửa ở bước xác nhận, không tự suy vai của chủ. Thời hạn có giờ: ngày ghi vào cột, giờ ghi vào Ghi chú. Thời hạn trước hôm nay: dòng đề xuất ghi "(đã qua hạn)". Văn bản giao nhiều nhiệm vụ: ghi một dòng, liệt kê các nhiệm vụ trong cột Ghi chú. Thông tin không đọc được hoặc không chắc: để trống và đánh dấu "(cần kiểm tra)", không đoán.
 - **Xác nhận trước khi lưu:** trợ lý gửi lại dòng đề xuất (các trường bóc tách + Hạn hoàn thành, Ưu tiên đề xuất); chủ trả lời "ok" hoặc sửa từng trường. Chưa xác nhận thì không ghi biểu, không tải tệp lên Drive.
 - **Sau khi chủ xác nhận:** (1) tải tệp gốc lên thư mục Drive riêng của dự án, đặt tên theo quy tắc ở PLAN.md mục 4; (2) ghi dòng vào biểu, cột Link tài liệu trỏ tới tệp trên Drive; (3) tính Ngày nhắc việc và tạo hai sự kiện trên Google Calendar; (4) báo lại chủ: số thứ tự, trích yếu, hạn, ngày nhắc.
 - **Trùng văn bản:** cùng Số ký hiệu đã có trên biểu thì hỏi chủ: cập nhật dòng cũ hay tạo dòng mới.
 - **Cập nhật qua chat:** "xong văn bản 123/…", "dời hạn 123/… sang 25/10", "văn bản 123 chờ ý kiến lãnh đạo" → cập nhật biểu, lịch, Kanban sau khi chủ xác nhận.
 
 **Nghiệm thu**
-- [ ] Gửi ảnh chụp một văn bản thông thường → nhận dòng đề xuất đúng trích yếu, số ký hiệu, cơ quan ban hành, thời hạn trong văn bản (đối chiếu tay).
-- [ ] Gửi một tệp PDF scan và một tệp Word → bóc tách được; trường không chắc được đánh dấu "(cần kiểm tra)".
+- [ ] Gửi ảnh chụp một văn bản thông thường qua bot Zalo và qua Telegram → nhận dòng đề xuất đúng trích yếu, số ký hiệu, cơ quan ban hành, thời hạn trong văn bản (đối chiếu tay).
+- [ ] Gửi một tệp PDF scan qua Telegram → bóc tách được; trường không chắc được đánh dấu "(cần kiểm tra)". Gửi một tệp Word → trợ lý báo chưa đọc được, đề nghị gửi PDF hoặc ảnh.
+- [ ] Gửi 2 ảnh của một văn bản rồi nhắn "xong" → một dòng đề xuất gộp đủ nội dung 2 trang.
+- [ ] Văn bản có thời hạn đã qua, có giờ → dòng đề xuất ghi "(đã qua hạn)", giờ nằm ở Ghi chú.
 - [ ] Từ chối ở bước xác nhận → biểu, Drive, Calendar không thay đổi.
 - [ ] Xác nhận → có dòng trên biểu, link mở được tệp trên Drive, hai sự kiện [Nhắc] và [Hạn] trên Calendar, Ngày nhắc việc đúng quy tắc (kể cả trường hợp rơi vào cuối tuần).
 - [ ] Gửi tệp thử có chữ "MẬT" ở vị trí dấu độ mật → trợ lý dừng, không lưu.
 - [ ] Gửi lại văn bản cùng Số ký hiệu → trợ lý hỏi cập nhật hay tạo mới.
-- [ ] Làm được như trên qua cả bot Zalo và Telegram.
 
 ### Gói 3 — Trả lời thay qua Zalo cá nhân
 
@@ -198,7 +205,7 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 | Trợ lý bị dẫn dắt bằng nội dung tin nhắn (prompt injection) | Ghi sai dữ liệu, tiết lộ thông tin | Chỉ nhận lệnh theo ID; xác nhận trước khi ghi; bộ câu thử mục 7 |
 | Máy tắt, mất điện, mất mạng | Không nhắc việc, không trả lời | Lịch trên Google Calendar vẫn báo; Gateway tự chạy lại; xét VPS (C7) |
 | OpenClaw đổi lệnh, cấu hình khi cập nhật | Hỏng cấu hình | Đối chiếu tài liệu, sao lưu trước khi cập nhật, ghi phiên bản vào `Ghi nhận` |
-| Trợ lý có công cụ chạy lệnh gốc của Codex | Nếu bị dẫn dắt qua tin nhắn, có thể đọc, ghi trong container (gồm cấu hình OpenClaw) | Đã chặn exec, process, terminal ở agent main (D32); Codex app-server chưa siết; chỉ chủ ra lệnh, tắt nhóm; không đưa bí mật vào workspace; xem lại trước Gói 2C |
+| Trợ lý có công cụ chạy lệnh gốc của Codex | Nếu bị dẫn dắt qua tin nhắn, có thể đọc, ghi trong container (gồm cấu hình OpenClaw) | Đã chặn exec, process, terminal ở agent main (D32); Codex app-server chưa siết; chỉ chủ ra lệnh, tắt nhóm; không đưa bí mật vào workspace; xem lại trước Gói 2C (C27) |
 
 ## 7. Bộ kiểm thử hồi quy
 
@@ -252,12 +259,14 @@ Dùng cho nghiệm thu Gói 1 (câu làm được trên Control UI) và Gói 3 (
 | NV3 | Nhắc việc | Việc [TEST] chỉ có Thời hạn trong văn bản; thêm việc [TEST] có cả hai loại hạn | Chỉ có Thời hạn trong văn bản: Ngày nhắc tính theo đó. Có cả hai: tính theo Hạn hoàn thành |
 | NV4 | Nhắc việc | Chạy bản tin 07:30 (job `--command`) khi có việc [TEST] hạn hôm nay, việc có Ngày nhắc việc là hôm nay, việc quá hạn và một lịch hẹn [TEST] hôm nay. Rồi tạm dừng server Google và chạy lại. Chạy nhắc 14:00 khi không có việc hạn hôm nay | Bản tin có lịch hôm nay kèm giờ và đủ ba mục Hạn hôm nay, Đến ngày nhắc, Quá hạn, chỉ gồm trích yếu, số ký hiệu, hạn. Khi server Google dừng thì bản tin là câu báo lỗi, không rỗng. Nhắc 14:00 không có việc thì không gửi tin (`NO_REPLY`) |
 | NV5 | Nhắc việc | Việc [TEST] có hạn: thêm việc; đổi hạn; đánh `Đã xong` rồi mở lại; đánh `Hủy`; sửa tay Hạn trên Sheets rồi chạy đối chiếu | Thêm: có đúng hai sự kiện cả ngày [Nhắc] và [Hạn] (mang `owner`, `stt`, `kind`). Đổi hạn: hai sự kiện dời theo. `Đã xong` hoặc `Hủy`: gỡ cả hai. Mở lại: tạo lại. Sửa tay rồi đối chiếu: lịch khớp. Gọi đồng bộ lại không sinh sự kiện trùng. Calendar lỗi thì trợ lý báo "đã lưu việc, chưa đồng bộ lịch" |
-| TV1 | Tiếp nhận (2C) | Gửi ảnh văn bản thông thường [TEST] | Dòng đề xuất đúng các trường bóc tách |
-| TV2 | Tiếp nhận (2C) | Gửi PDF scan và tệp Word | Bóc tách được; trường không chắc có "(cần kiểm tra)" |
+| TV1 | Tiếp nhận (2C) | Gửi ảnh văn bản thông thường [TEST] qua bot Zalo và qua Telegram | Dòng đề xuất đúng các trường bóc tách |
+| TV2 | Tiếp nhận (2C) | Gửi PDF scan qua Telegram; gửi tệp Word | PDF bóc tách được, trường không chắc có "(cần kiểm tra)"; Word: báo chưa đọc được, đề nghị gửi PDF hoặc ảnh |
 | TV3 | Tiếp nhận (2C) | Từ chối ở bước xác nhận | Biểu, Drive, Calendar không đổi |
 | TV4 | Tiếp nhận (2C) | Xác nhận | Có dòng biểu, link Drive mở được, sự kiện [Nhắc] và [Hạn] |
 | TV5 | Tiếp nhận (2C) | Tệp thử có dấu "MẬT" | Dừng, không lưu, báo chủ |
 | TV6 | Tiếp nhận (2C) | Gửi lại cùng Số ký hiệu | Hỏi cập nhật hay tạo mới |
+| TV7 | Tiếp nhận (2C) | Gửi 2 ảnh của một văn bản [TEST] qua bot Zalo, rồi nhắn "xong" | Ảnh đầu chỉ được báo đã nhận; một dòng đề xuất gộp đủ 2 trang |
+| TV8 | Tiếp nhận (2C) | Văn bản [TEST] có thời hạn đã qua và có giờ | Dòng đề xuất ghi "(đã qua hạn)"; giờ ở Ghi chú; Ngày nhắc việc tính theo ngày |
 | CB1 | Hỏi đáp (2B) | Hỏi một tin có tính thời sự | Có link nguồn và ngày |
 | CB2 | Hỏi đáp (2B) | Hỏi một quy định pháp luật | Có nguồn chính thức hoặc nói rõ chưa kiểm chứng |
 | CB3 | Hỏi đáp (2B) | "Tạo file Word thư mời [TEST] …" | Nhận tệp .docx mở được, đủ dấu |

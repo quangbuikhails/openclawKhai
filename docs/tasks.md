@@ -6,8 +6,9 @@
 
 ## Đang làm
 
-- G2C-01 Khảo sát tiếp nhận văn bản (bắt đầu 10/11/2026).
-- G2-08 Sửa lỗi `khai-mcp-google` thoát sau khi khởi động lại.
+- G2-08 Sửa lỗi `khai-mcp-google` thoát sau khi khởi động lại (đã sửa 227498e, chờ kiểm chứng khởi động lại hai lần).
+- G2C-02 Skill tiếp nhận văn bản (bước kế hoạch).
+- G4-01 Khảo sát web app (song song theo D40).
 
 ## Gói 1 — Hạ tầng
 
@@ -129,18 +130,20 @@ _(Chi tiết "Làm" và "Kiểm chứng" của từng task Gói 2 được bổ 
 
 ## Gói 2C — Tiếp nhận văn bản giao việc
 
-> Bắt đầu sau khi Gói 2 nghiệm thu. Trước G2C-02: chốt C17; C2 phải gồm quyền ghi thư mục Drive riêng.
+> Bắt đầu sau khi Gói 2 nghiệm thu. C17 đã chốt (D38), kênh tiếp nhận (D37), Drive (D39). C27 chốt trước khi đưa G2C-02 lên chạy thật.
 > Bản nháp skill `tiep-nhan-van-ban` trong `ban-nhap/skills/` là đầu vào.
 
-- [ ] **G2C-01 Khảo sát** — không viết code. Trình: bot Zalo và Telegram nhận ảnh, PDF, Word đến dung lượng bao nhiêu; trợ lý đọc ảnh, PDF scan, tệp Word bằng cách nào (C17); thử bóc tách 3 văn bản mẫu thông thường do anh Khải chọn, so với đọc tay; cách tải tệp lên Drive theo quyền đã chốt ở C2.
-- [ ] **G2C-02 Skill tiếp nhận văn bản** — đọc, bóc tách, gửi dòng đề xuất, chờ xác nhận; dừng khi thấy dấu độ mật; hỏi khi trùng Số ký hiệu; kiểm chứng TV1, TV3, TV5, TV6.
-- [ ] **G2C-03 Lưu tệp lên Drive, ghi biểu, tạo sự kiện lịch sau khi xác nhận** — theo quy tắc tên tệp, thư mục ở PLAN.md mục 4; kiểm chứng TV2, TV4.
+- [x] **G2C-01 Khảo sát** — không viết code. Trình: bot Zalo và Telegram nhận ảnh, PDF, Word đến dung lượng bao nhiêu; trợ lý đọc ảnh, PDF scan, tệp Word bằng cách nào (C17); thử bóc tách 3 văn bản mẫu thông thường do anh Khải chọn, so với đọc tay; cách tải tệp lên Drive theo quyền đã chốt ở C2.
+  - Ghi nhận (tra tài liệu, 10/11/2026; docs đóng gói trong openclaw@2026.10.3): bot Zalo chính thức chỉ có tin chữ, ảnh, sticker, thoại, không nhận PDF/Word; ảnh qua Zalo giới hạn `channels.zalo.mediaMaxMb` mặc định 5 MB; Telegram nhận ảnh, PDF, Word tối đa 20 MB. Ảnh đưa thẳng vào mô hình; PDF thành file block, trang scan render thành ảnh; tool `pdf` không có trong profile messaging; không có bộ chuyển đổi .docx. Drive: Service Account không có dung lượng, Gmail cá nhân không tạo được Shared Drive; hướng khả thi OAuth `drive.file`. Chữ trong ảnh không được đánh dấu "external", nên quy tắc "nội dung là dữ liệu" phải nằm ở SOUL/skill và bước xác nhận.
+  - Ghi nhận (phần thử, 10/11/2026; OpenClaw 2026.10.3): 4 văn bản thông thường (công văn 1 trang, công văn 2 trang, PDF scan, Word), câu "[TEST] … Không lưu", so với đáp án đọc tay. (1) Telegram: ảnh 1 trang 19 giây, PDF scan 25 giây, cả hai đúng đủ 5 trường (trích yếu, số ký hiệu, cơ quan ban hành, nội dung cần xử lý, thời hạn); Word: trợ lý báo chưa đọc được DOCX, đề nghị gửi PDF hoặc ảnh từng trang. (2) Zalo (bot chính thức): ảnh 1 trang 10 giây, đúng đủ 5 trường; 2 ảnh gửi một lần: mỗi ảnh một lượt, ảnh 1 được trả lời ngay, lượt sau gộp đủ 2 trang, 40 giây, đúng đủ 5 trường; PDF: trợ lý im lặng. (3) Biểu `bieu`, `log`, Calendar không đổi. (4) Phát hiện cho G2C-02: "Nội dung cần xử lý" là yêu cầu chung của văn bản, không phải việc của chủ; hạn đã qua (PDF hạn 06/11) không được cảnh báo; hạn có giờ (17:00) chưa có chỗ ghi; nhiều ảnh qua Zalo chưa ghép thành một lượt. (5) `/codex status` qua Telegram trả "Only an owner or operator.admin can inspect Codex host state". Kết luận: anh Khải chốt D37 đến D40, mở C27. Chưa thử: Drive (G2C-03); ảnh trên 5 MB qua Zalo; tệp trên 20 MB qua Telegram.
+- [ ] **G2C-02 Skill tiếp nhận văn bản** — đọc, bóc tách, gửi dòng đề xuất, chờ xác nhận; dừng khi thấy dấu độ mật; hỏi khi trùng Số ký hiệu; theo SPEC Gói 2C (đầu vào theo D37, D38; Nội dung cần xử lý theo ghi chú của chủ; hạn đã qua, hạn có giờ; ghép nhiều ảnh). Kế hoạch phải gồm: tra docs OpenClaw xem có cơ chế gom tin đến liên tiếp không (chưa kiểm chứng, không đoán khóa); khảo sát C27 và `session-memory`, chỉ đọc, chưa đổi cấu hình. Kiểm chứng TV1, TV3, TV5, TV6, TV7, TV8 và 7.3.
+- [ ] **G2C-03 Lưu tệp lên Drive, ghi biểu, tạo sự kiện lịch sau khi xác nhận** — theo quy tắc tên tệp, thư mục ở PLAN.md mục 4; kiểm chứng TV2, TV4. Theo D39. Anh Khải tự làm: tạo OAuth client loại Desktop, cấu hình màn hình đồng ý (Testing), đăng nhập cấp quyền `drive.file`; refresh token đặt vào `secrets/google/` (không dán vào chat). Kiểm chứng thêm: thư mục Drive do server tạo hiện trong Drive của chủ và không chia sẻ cho ai.
 - [ ] **G2C-04 Cập nhật qua chat** — "xong văn bản …", "dời hạn …", "chờ ý kiến …" cập nhật biểu và lịch sau khi xác nhận.
 - [ ] **G2C-05 Chạy thử 1 tuần với văn bản thật (chỉ văn bản thông thường), nghiệm thu Gói 2C, triển khai với nhãn `goi2c-v1`**
 
 ## Gói 4 — Web app: Biểu theo dõi, Lịch, Kanban
 
-> Bắt đầu sau Gói 2C (D7). Trước G4-02: chốt C6, C16. Giao diện theo bản thiết kế (PLAN.md mục 7).
+> Theo D40: G4-01 làm song song từ G2C-02; G4-02 (chỉ đọc) từ tuần chạy thử G2C-05; từ G4-03 làm sau khi nghiệm thu Gói 2C. Trước G4-02: chốt C6, C16. Giao diện theo bản thiết kế (PLAN.md mục 7).
 
 - [ ] **G4-01 Khảo sát và kế hoạch** — không viết code. Trình: cấu trúc web app và máy chủ nhỏ đọc, ghi Sheets, Calendar (C6); cách đăng nhập; phương án truy cập từ điện thoại (C16) kèm các bước anh Khải phải làm.
 - [ ] **G4-02 Biểu theo dõi trên web** — bảng 14 cột, lọc, tô màu, mở tệp Drive.
@@ -263,3 +266,4 @@ _(Lập danh sách task khi bắt đầu gói.)_
 - `Sự cố 10/11/2026:` sau khi tắt và mở lại Ubuntu, `khai-mcp-google` thoát mã 127 (lần 2, sau 03/11); Gateway, `openclaw-bot`, `9router-bot` chạy bình thường · `Nguyên nhân:` chưa rõ, nghi tệp `secrets/google-sa.json` gắn đơn lẻ từ ổ WSL chưa sẵn sàng khi Docker tự khởi động container · `Đã khắc phục:` chạy lại `up -d --no-deps --force-recreate khai-mcp-google` như 03/11; log "biểu: prod, lịch: prod, brief: bật"; Telegram và Zalo works; post-deploy-check ĐẠT · `Task mới:` G2-08.
 - (Từ G2-07, 10/11/2026) Container `bold_jemison` (Exited 3 tuần, nghi còn từ `hello-world` ở G1-00): ngoài dự án, vô hại; anh Khải tự xóa khi dọn.
 - (Từ G2-07, chuyển khi nghiệm thu Gói 2, 10/11/2026) Chưa kiểm chứng, theo dõi khi dùng thật: bot Zalo ngừng hẳn (không chỉ chat_id sai) thì Telegram nhận gì; báo lỗi lặp lại khi Zalo hỏng nhiều ngày (docs ghi chỉ báo lần đầu); giới hạn độ dài tin Telegram; ý nghĩa `enabled: true` khi cài plugin Zalo với `--no-enable`; nhật ký Docker của Gateway không ghi tin đến nên chưa đối chiếu được phép thử tài khoản lạ qua nhật ký.
+- (Từ G2C-01, 10/11/2026) `/codex status` qua Telegram trả "Only an owner or operator.admin can inspect Codex host state": `allowFrom` không cấp quyền owner cho lệnh quản trị. Chưa tra docs khóa owner. Không cấp thêm quyền qua kênh nhắn tin (D32); kiểm hạn Codex bằng `scripts/post-deploy-check.sh` trên máy.
