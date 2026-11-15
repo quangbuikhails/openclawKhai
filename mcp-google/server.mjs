@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
+import { driveEnabled, registerDriveTools } from "./drive.mjs";
 
 const TEST_PREFIX = "[TEST]";
 const CAL_OWNER = "khai-pbs"; // dấu extendedProperties.private.owner trên mọi sự kiện server tạo (PLAN.md D25)
@@ -226,6 +227,32 @@ async function writeCell(col, row, value) {
   await google("PUT", `${SHEETS}/values/${enc(`${SHEET_TAB}!${col}${row}`)}?valueInputOption=RAW`, { values: [[value]] });
 }
 
+// Ghi bằng RAW chỉ đặt giá trị; hàng chưa định dạng sẽ hiện số thô (46346). Đặt dd/MM/yyyy cho B, H, M của hàng vừa ghi (G2-07).
+let sheetIdCache;
+async function formatDateCells(row) {
+  try {
+    if (sheetIdCache === undefined) {
+      const meta = await google("GET", `${SHEETS}?fields=sheets.properties(sheetId,title)`);
+      sheetIdCache = meta.sheets?.find((s) => s.properties?.title === SHEET_TAB)?.properties?.sheetId;
+      if (sheetIdCache === undefined) throw new Error("không thấy tab");
+    }
+    const requests = ["B", "H", "M"].map((col) => {
+      const c = col.charCodeAt(0) - 65;
+      return {
+        repeatCell: {
+          range: { sheetId: sheetIdCache, startRowIndex: row - 1, endRowIndex: row, startColumnIndex: c, endColumnIndex: c + 1 },
+          cell: { userEnteredFormat: { numberFormat: { type: "DATE", pattern: "dd/MM/yyyy" } } },
+          fields: "userEnteredFormat.numberFormat",
+        },
+      };
+    });
+    await google("POST", `${SHEETS}:batchUpdate`, { requests });
+    return {};
+  } catch {
+    return { format_warning: "Đã ghi nhưng chưa đặt được định dạng ngày, ngày có thể hiện số thô" };
+  }
+}
+
 // Cột N do công thức trên Sheets tính; chỉ đọc lại để báo.
 async function readRemind(row) {
   const v = (await readRange(`${SHEET_TAB}!${COL_LETTER.remind_date}${row}`))[0]?.[0];
@@ -258,6 +285,10 @@ const serialized = (fn) => {
 };
 
 const pastWarning = (due) => (due && due < todayIso() ? { warning: "Hạn đã qua" } : {});
+const joinWarnings = (...list) => {
+  const w = list.flatMap((x) => (x.warning ? [x.warning] : []));
+  return w.length ? { warning: w.join("; ") } : {};
+};
 
 // ---- Đồng bộ [Nhắc]/[Hạn] lên lịch (D28). Mọi hàm ghi phải được gọi trong `serialized`. ----
 const SYNC_FIELDS = "id,summary,description,status,start,end,extendedProperties/private";
@@ -528,7 +559,7 @@ async function startupChecks() {
 }
 
 function buildServer() {
-  const server = new McpServer({ name: "khai-mcp-google", version: "0.4.0" });
+  const server = new McpServer({ name: "khai-mcp-google", version: "0.5.0" });
 
   // Mỗi công cụ ghi log tên và kết quả, không ghi nội dung dữ liệu.
   const tool = (name, description, inputSchema, handler) =>
@@ -593,7 +624,7 @@ function buildServer() {
       doc_number: shortText(100).optional(),
       issuer: shortText(300).optional(),
       note: shortText(1000).optional(),
-      doc_link: z.string().url().max(500).optional(),
+      doc_link: z.string().url().max(500).startsWith("https://drive.google.com/", "link phải là tệp hoặc thư mục trên Drive").optional(),
       doc_deadline: isoDate.optional().describe("Thời hạn yêu cầu trong văn bản"),
       received_date: isoDate.optional().describe("Mặc định hôm nay"),
       channel,
@@ -627,6 +658,7 @@ function buildServer() {
         if (target.some((v) => !isBlank(v))) return fail("Dòng đích không trống, thử lại");
         // Chỉ ghi A:M; cột N là công thức mảng trên Sheets.
         await google("PUT", `${SHEETS}/values/${enc(`${SHEET_TAB}!A${row}:M${row}`)}?valueInputOption=RAW`, { values: [values] });
+        const formatted = await formatDateCells(row);
         const logged = await writeLog(a.channel, "them", newStt, a.due_date ? `thêm việc, hạn ${a.due_date}` : "thêm việc, chưa có hạn");
         const { remind, synced } = await remindThenSync(row, {
           stt: newStt,
@@ -637,7 +669,8 @@ function buildServer() {
           doc_link: a.doc_link,
           due_date: a.due_date,
         });
-        return ok({ stt: newStt, ...remind, ...pastWarning(a.due_date), ...logged, ...synced });
+        const noLink = !isBlank(a.doc_number) && isBlank(a.doc_link) ? { warning: "Chưa có link tài liệu" } : {};
+        return ok({ stt: newStt, ...remind, ...joinWarnings(pastWarning(a.due_date), noLink), ...formatted, ...logged, ...synced });
       }),
   );
 
@@ -669,9 +702,10 @@ function buildServer() {
         if (denied) return fail(denied);
         if (!(await stillSameRow(rec))) return fail("Biểu vừa thay đổi, thử lại");
         await writeCell(COL_LETTER.due_date, rec.row, due_date ? isoToSerial(due_date) : "");
+        const formatted = await formatDateCells(rec.row);
         const logged = await writeLog(ch, "doi_han", sttValue, `${rec.due_date ?? "chưa có"} → ${due_date ?? "chưa có"}`);
         const { remind, synced } = await remindThenSync(rec.row, { ...rec, due_date });
-        return ok({ stt: sttValue, due_date, ...remind, ...pastWarning(due_date), ...logged, ...synced });
+        return ok({ stt: sttValue, due_date, ...remind, ...pastWarning(due_date), ...formatted, ...logged, ...synced });
       }),
   );
 
@@ -853,6 +887,8 @@ function buildServer() {
     }),
   );
 
+  registerDriveTools({ tool, serialized, ok, fail, z, isoDate, shortText, todayIso, testMode: SHEET_MODE === "test" });
+
   return server;
 }
 
@@ -936,4 +972,4 @@ createServer(async (req, res) => {
   } catch {
     if (!res.headersSent) send(res, 400, "bad request");
   }
-}).listen(PORT, "0.0.0.0", () => console.log(`khai-mcp-google lắng nghe cổng ${PORT} (biểu: ${SHEET_MODE}, lịch: ${CAL_MODE}, brief: ${BRIEF_TOKEN ? "bật" : "tắt"})`));
+}).listen(PORT, "0.0.0.0", () => console.log(`khai-mcp-google lắng nghe cổng ${PORT} (biểu: ${SHEET_MODE}, lịch: ${CAL_MODE}, brief: ${BRIEF_TOKEN ? "bật" : "tắt"}, drive: ${driveEnabled ? "bật" : "tắt"})`));

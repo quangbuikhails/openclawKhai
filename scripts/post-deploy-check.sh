@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Kiểm tra nhanh sau triển khai: phần lệnh của SPEC mục 7.3 bước 1, cộng kiểm tra hạn đăng nhập Codex (G1-06, G1-07).
-# Bước: healthz; models status --check; hạn token (expiresAt nhỏ nhất, giờ Việt Nam); channels status --probe.
+# Bước: healthz; models status --check; hạn token (expiresAt nhỏ nhất, giờ Việt Nam); channels status --probe; hạn đăng nhập Drive; dung lượng media/inbound.
 # Cách dùng: bash scripts/post-deploy-check.sh
 # Biến môi trường: OPENCLAW_DIR (mặc định ~/apps/openclaw), OPENCLAW_HEALTH_URL (mặc định http://127.0.0.1:28789/healthz).
 # Thoát 0 nếu không có bước KHÔNG ĐẠT (CẢNH BÁO và BỎ QUA không tính); thoát 1 nếu có.
@@ -130,6 +130,54 @@ case "$chan_state" in
     ;;
   *) report "KHÔNG ĐẠT" "channels status --probe" "không xác định được kênh đã cấu hình (config get channels thoát $chan_rc; chạy tay để xem)" ;;
 esac
+
+# Bước 5: đăng nhập Drive (OAuth Testing: refresh token hết hạn sau 7 ngày, G2C-03/D44). Chỉ đọc obtained_at, không in token.
+repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+drive_token="${DRIVE_OAUTH_TOKEN_FILE:-$repo_dir/secrets/google/oauth-token.json}"
+if [[ ! -f "$drive_token" ]]; then
+  report "BỎ QUA" "đăng nhập Drive" "chưa có $drive_token"
+else
+  verdict="$(python3 -I -c '
+import json, sys
+from datetime import datetime, timedelta, timezone
+try:
+    ob = json.load(open(sys.argv[1])).get("obtained_at", "")
+    t = datetime.fromisoformat(ob.replace("Z", "+00:00"))
+except Exception:
+    print("FAIL|không đọc được obtained_at"); sys.exit()
+vn = timezone(timedelta(hours=7))
+exp = t + timedelta(days=7)
+age = (datetime.now(timezone.utc) - t).total_seconds() / 86400
+when = exp.astimezone(vn).strftime("%d/%m/%Y %H:%M")
+if age >= 7:
+    print("FAIL|đã hết hạn lúc %s" % when)
+elif age >= 5:
+    print("WARN|hết hạn lúc %s, đã %.1f ngày" % (when, age))
+else:
+    print("OK|hết hạn lúc %s, đã %.1f ngày" % (when, age))
+' "$drive_token" 2>/dev/null)"
+  case "${verdict%%|*}" in
+    OK) report "ĐẠT" "đăng nhập Drive" "${verdict#*|}" ;;
+    WARN) report "CẢNH BÁO" "đăng nhập Drive" "${verdict#*|} (từ ngày thứ 5: đăng nhập lại Drive, xem deploy/README.md)" ;;
+    *) report "KHÔNG ĐẠT" "đăng nhập Drive" "${verdict#*|}" ;;
+  esac
+fi
+
+# Bước 6: dung lượng media/inbound (tệp gốc văn bản do Gateway lưu; dọn bằng scripts/don-media-inbound.sh).
+inbound="${INBOUND_DIR:-$HOME/.openclaw/workspace/media/inbound}"
+if [[ -d "$inbound" ]]; then
+  size_kb="$(du -sk "$inbound" 2>/dev/null | cut -f1)"
+  count="$(find "$inbound" -mindepth 1 -maxdepth 1 -type d | wc -l)"
+  old="$(find "$inbound" -mindepth 1 -maxdepth 1 -type d -mtime +14 | wc -l)"
+  note="$count thư mục, $((size_kb / 1024)) MB, $old quá 14 ngày"
+  if [[ "$size_kb" -gt 204800 ]]; then
+    report "CẢNH BÁO" "media/inbound" "$note (trên 200 MB: chạy scripts/don-media-inbound.sh)"
+  else
+    report "ĐẠT" "media/inbound" "$note"
+  fi
+else
+  report "BỎ QUA" "media/inbound" "chưa có thư mục $inbound"
+fi
 
 echo "----"
 if [[ "$fail_count" -gt 0 ]]; then

@@ -111,6 +111,37 @@ Chưa kiểm chứng:
 - Ngưỡng "sắp hết hạn" của `models status --check`.
 - Cách hoàn tác ở bước 5 (chưa chạy thử).
 
+## Đăng nhập lại Drive mỗi tuần (G2C-03, D44)
+
+Màn hình đồng ý OAuth ở chế độ Testing nên refresh token Drive hết hạn sau 7 ngày. Hết hạn thì `drive_save_document` trả "Drive cần đăng nhập lại" và không ghi gì; Sheets, Calendar (Service Account) không bị ảnh hưởng. Hạn hiện tại: **22/11/2026 khoảng 01:16 giờ Việt Nam** (`obtained_at` 2026-11-14T18:16:57Z + 7 ngày). Làm lại sớm nhất từ ngày thứ 5 (`scripts/post-deploy-check.sh` bắt đầu cảnh báo), dự kiến **20/11/2026, cùng lượt đăng nhập lại Codex** (hạn Codex 23/11/2026 13:56).
+
+1. Chạy (máy chủ không có `node` nên dùng image OpenClaw; không mở cổng):
+
+   ```bash
+   cd ~/projects/khai-phien-ban-so && docker run --rm -it --user 1000:1000 --entrypoint node -v "$PWD/scripts:/s:ro" -v "$PWD/secrets/google:/g" "$(grep ^OPENCLAW_IMAGE ~/apps/openclaw/.env | cut -d= -f2)" /s/google-oauth-login.mjs /g/oauth-client.json /g/oauth-token.json
+   ```
+
+2. Mở đường dẫn script in ra, đăng nhập tài khoản của chủ, cấp quyền `drive.file`. Trình duyệt sẽ báo không vào được `http://127.0.0.1:1/...` (bình thường); chép **cả URL** ở thanh địa chỉ, dán vào dòng nhắc của script. Không dán URL hay token vào chat.
+3. Script ghi `secrets/google/oauth-token.json` (quyền 600, kèm `obtained_at`), không in token. Server đọc tệp này mỗi lần cần, không cần tạo lại container.
+4. Kiểm: `bash scripts/post-deploy-check.sh` dòng "đăng nhập Drive" phải ĐẠT, hạn mới sau 7 ngày.
+
+Xem lại Publish sang Production khi có tên miền đã xác minh (Google đòi trang chủ và chính sách riêng tư).
+
+## Xoay MCP_GOOGLE_TOKEN (làm ở G2C-03 ngày 14/11/2026)
+
+Token Bearer của MCP `google` nằm ở hai nơi: `secrets/mcp-google.env` (`MCP_GOOGLE_TOKEN`) và `~/.openclaw/openclaw.json` (`mcp.servers.google.headers.Authorization`).
+
+1. Sao lưu ngoài repo: `cp -p secrets/mcp-google.env ~/.openclaw/mcp-google.env.truoc-xoay` và `cp -p ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.truoc-xoay`.
+2. Tạo giá trị mới (`openssl rand -hex 32`), sửa `secrets/mcp-google.env`, tạo lại container (lệnh `up -d --force-recreate --no-deps khai-mcp-google` như mục MCP Google, bước 3). **Lưu `docker logs -t khai-mcp-google` ra tệp trước** vì tạo lại container xóa log.
+3. Cập nhật `Authorization` trong `openclaw.json` bằng `mcp set … --dry-run` rồi áp dụng (nạp nóng). Không in giá trị token ra màn hình hay chat.
+4. Kiểm: lời gọi công cụ đầu tiên từ phiên mới thành công. `BRIEF_TOKEN` là khóa riêng, không xoay cùng.
+
+## Thư mục tệp gốc `media/inbound` (G2C-03, D43)
+
+- Gateway lưu tệp gốc văn bản đến ở `~/.openclaw/workspace/media/inbound/openclaw-staged-<uuid>/`. `docker-compose.mcp-google.yml` gắn thư mục này **chỉ đọc** vào `khai-mcp-google` tại `/inbox`. Công cụ `drive_save_document` nhận mã tệp (`media://inbound/<mã>`), không nhận đường dẫn, và chỉ mở tệp qua các kiểm tra: mã đúng dạng, không liên kết tượng trưng, có tệp đánh dấu `.gitignore` của Gateway, đuôi jpg/jpeg/png/pdf/docx, đúng chữ ký tệp.
+- Rủi ro chấp nhận: server đọc được mọi tệp trong `inbound`, không chỉ tệp của lượt đang xử lý. Chỉ phiên của chủ gọi được công cụ (D32).
+- Dọn: `bash scripts/don-media-inbound.sh` chỉ liệt kê thư mục quá 14 ngày (đổi bằng `--ngay N`). Xóa thật phải thêm `--xoa` và gõ `XOA` khi được hỏi. Không đưa vào cron. `post-deploy-check.sh` cảnh báo khi thư mục trên 200 MB. Tệp đã lưu lên Drive thì bản trên Drive còn nguyên.
+
 ## MCP Google (G2-01B, spike)
 
 Server MCP nhỏ (`mcp-google/server.mjs`) chạy ở container riêng `khai-mcp-google`, dùng lại image OpenClaw đang ghim digest (Node và SDK MCP có sẵn trong `/app/node_modules`, không thêm package). HTTP trong mạng `khai-pbs_default`, không publish cổng. Chỉ thao tác đúng một bảng tính và một lịch theo `SPREADSHEET_ID`, `CALENDAR_ID` trong `secrets/mcp-google.env` (đổi tên từ `TEST_SPREADSHEET_ID`, `TEST_CALENDAR_ID` ở G2-04: phải sửa tệp này trước khi chạy lại). `SHEET_MODE`, `CAL_MODE` (`test` mặc định, hoặc `prod`) phải khớp tên bảng tính, lịch; chế độ `test` chỉ ghi vào việc có Nội dung cần xử lý bắt đầu `[TEST]`. Công cụ: `task_list`, `task_add`, `task_set_status`, `task_set_due`, `date_today`, `cal_*`; không có công cụ xóa dòng. `cal_create`, `cal_update`, `cal_delete` chỉ tác động sự kiện do trợ lý tạo (dấu `private.owner`, PLAN.md D25), sự kiện chủ tự tạo chỉ đọc; `CAL_MODE=test` bắt buộc tiêu đề bắt đầu `[TEST]`.
