@@ -142,6 +142,30 @@ Token Bearer của MCP `google` nằm ở hai nơi: `secrets/mcp-google.env` (`M
 - Rủi ro chấp nhận: server đọc được mọi tệp trong `inbound`, không chỉ tệp của lượt đang xử lý. Chỉ phiên của chủ gọi được công cụ (D32).
 - Dọn: `bash scripts/don-media-inbound.sh` chỉ liệt kê thư mục quá 14 ngày (đổi bằng `--ngay N`). Xóa thật phải thêm `--xoa` và gõ `XOA` khi được hỏi. Không đưa vào cron. `post-deploy-check.sh` cảnh báo khi thư mục trên 200 MB. Tệp đã lưu lên Drive thì bản trên Drive còn nguyên.
 
+## Web app Biểu theo dõi, chỉ đọc (G4-02, D47)
+
+Container `khai-web-admin`, cổng `127.0.0.1:28801`, mạng riêng `khai-pbs-web`. Dùng tệp compose riêng; không đụng `openclaw-gateway`, `khai-mcp-google`.
+
+1. Khóa SA chỉ đọc: `secrets/google-ro/google-ro-sa.json` (đã có). Bảng tính thật và lịch "Công việc" chia sẻ cho SA này.
+2. Tạo `secrets/web-admin.env` (nhập ẩn, không in giá trị). Chạy từ thư mục gốc repo, gõ với `!` nếu trong phiên Claude Code:
+
+   ```bash
+   install -m 600 /dev/null secrets/web-admin.env
+   docker run --rm -it --user 1000:1000 --network none --read-only --cap-drop ALL --entrypoint node \
+     -v "$PWD/scripts/web-admin-khoi-tao.mjs:/s.mjs:ro" -v "$PWD/secrets/web-admin.env:/out.env" \
+     "$(grep ^OPENCLAW_IMAGE= ~/apps/openclaw/.env | cut -d= -f2-)" /s.mjs
+   ```
+
+   Hỏi lần lượt: mật khẩu (từ 12 ký tự, 2 lần), ID bảng tính, ID lịch. Ghi lại: thêm `--ghi-de` sau `/s.mjs`. Muốn thấy ký tự khi gõ (chẩn đoán): thêm `--hien`. Hai lần không khớp thì chỉ in độ dài, không in nội dung.
+3. Bật (project `khai-pbs-web` riêng nên không có cảnh báo orphan; không bao giờ chạy `down` hay `--remove-orphans` với project `khai-pbs`):
+
+   ```bash
+   docker compose -p khai-pbs-web --env-file ~/apps/openclaw/.env -f deploy/docker-compose.web-admin.yml up -d --no-deps web-admin
+   curl -fsS http://127.0.0.1:28801/healthz
+   ```
+
+4. Dừng, bật lại hay cập nhật mã: chỉ thao tác với `web-admin`. Sửa mã trong `web-admin/` thì chạy `up -d --force-recreate --no-deps web-admin` (tệp tĩnh đọc một lần lúc khởi động; `up -d` thường không làm gì khi cấu hình không đổi); dừng: `stop web-admin`. Đổi mật khẩu: chạy lại bước 2 với `--ghi-de` rồi tạo lại container (phiên cũ mất hiệu lực vì khóa phiên đổi).
+
 ## MCP Google (G2-01B, spike)
 
 Server MCP nhỏ (`mcp-google/server.mjs`) chạy ở container riêng `khai-mcp-google`, dùng lại image OpenClaw đang ghim digest (Node và SDK MCP có sẵn trong `/app/node_modules`, không thêm package). HTTP trong mạng `khai-pbs_default`, không publish cổng. Chỉ thao tác đúng một bảng tính và một lịch theo `SPREADSHEET_ID`, `CALENDAR_ID` trong `secrets/mcp-google.env` (đổi tên từ `TEST_SPREADSHEET_ID`, `TEST_CALENDAR_ID` ở G2-04: phải sửa tệp này trước khi chạy lại). `SHEET_MODE`, `CAL_MODE` (`test` mặc định, hoặc `prod`) phải khớp tên bảng tính, lịch; chế độ `test` chỉ ghi vào việc có Nội dung cần xử lý bắt đầu `[TEST]`. Công cụ: `task_list`, `task_add`, `task_set_status`, `task_set_due`, `date_today`, `cal_*`; không có công cụ xóa dòng. `cal_create`, `cal_update`, `cal_delete` chỉ tác động sự kiện do trợ lý tạo (dấu `private.owner`, PLAN.md D25), sự kiện chủ tự tạo chỉ đọc; `CAL_MODE=test` bắt buộc tiêu đề bắt đầu `[TEST]`.

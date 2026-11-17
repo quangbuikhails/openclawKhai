@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biểu theo dõi · Khải Phiên Bản Số</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand"><span class="avatar">KS</span><div><strong>Khải Phiên Bản Số</strong><small>Bảng quản lý</small></div></div>
+  <nav>
+    <span class="nav-title">Việc của tôi</span>
+    <a class="nav-item active" href="/">Biểu theo dõi</a>
+  </nav>
+  <button id="logout" class="nav-item logout" type="button">Đăng xuất</button>
+</aside>
+<main>
+  <header class="page-head">
+    <h1>Biểu theo dõi công việc</h1>
+    <p class="sub">Nguồn dữ liệu duy nhất là Google Sheets. Trang này chỉ để xem.</p>
+    <p class="sync"><span id="dot" class="dot"></span><span id="syncText">Đang tải…</span>
+      <a id="sheetLink" class="btn" href="#" target="_blank" rel="noopener noreferrer" hidden>Mở bảng tính</a></p>
+    <p id="today" class="today"></p>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="Tóm tắt"></section>
+
+  <section class="filters" aria-label="Bộ lọc">
+    <div class="chips" id="chips"></div>
+    <div class="selects">
+      <div class="seg" id="prio" role="group" aria-label="Ưu tiên"></div>
+      <label class="sel">Trạng thái
+        <select id="status"><option value="">Tất cả</option><option>Chưa xử lý</option><option>Đang xử lý</option><option>Chờ ý kiến</option><option>Đã xong</option><option>Hủy</option></select></label>
+      <label class="sel">Hạn
+        <select id="due"><option value="">Mọi hạn</option><option value="overdue">Quá hạn</option><option value="today">Hôm nay</option><option value="week">7 ngày tới</option><option value="none">Không có hạn</option></select></label>
+      <div class="seg desktop-only" id="cols" role="group" aria-label="Số cột"></div>
+    </div>
+  </section>
+
+  <div class="table-wrap desktop-only"><table id="table"><thead></thead><tbody></tbody></table></div>
+  <div class="cards" id="cards"></div>
+  <p id="empty" class="empty" hidden>Không có dòng nào khớp bộ lọc.</p>
+
+  <p class="legend">
+    <span class="swatch overdue"></span> Quá hạn hoàn thành, chưa xong
+    <span class="swatch remind"></span> Đã đến ngày nhắc việc
+    <b class="check">(cần kiểm tra)</b> trợ lý không đọc chắc, anh soát lại
+  </p>
+</main>
+<script src="/app.js" type="module"></script>
+</body>
+</html>

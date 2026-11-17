@@ -1,0 +1,38 @@
+# Web app Biểu theo dõi, chỉ đọc (G4-02, PLAN.md D47). Tệp đứng một mình, KHÔNG ghép với docker-compose.yml của OpenClaw.
+# Bật: docker compose -p khai-pbs-web --env-file ~/apps/openclaw/.env -f deploy/docker-compose.web-admin.yml up -d --no-deps web-admin
+# Project compose riêng khai-pbs-web (không có orphan, down hay --remove-orphans không chạm openclaw-gateway, khai-mcp-google). Mạng riêng khai-pbs-web: không có đường tới khai-mcp-google. Không có token ghi, không mount secrets/mcp-google.env.
+services:
+  web-admin:
+    image: ${OPENCLAW_IMAGE:?đặt OPENCLAW_IMAGE trong ~/apps/openclaw/.env}
+    container_name: khai-web-admin
+    entrypoint: ["node", "/app/web-admin/server.mjs"]
+    user: "1000:1000"
+    restart: unless-stopped
+    env_file:
+      - ${HOME}/projects/khai-phien-ban-so/secrets/web-admin.env
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - ${HOME}/projects/khai-phien-ban-so/web-admin:/app/web-admin:ro
+      # Gắn thư mục (không gắn tệp đơn lẻ), chỉ chứa khóa SA chỉ đọc.
+      - ${HOME}/projects/khai-phien-ban-so/secrets/google-ro:/run/secrets:ro
+    ports:
+      - "127.0.0.1:28801:3000"
+    networks: [web]
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  web:
+    name: khai-pbs-web
