@@ -150,21 +150,21 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 
 ### Gói 4 — Web app quản lý
 
-- **Biểu theo dõi:** bảng 14 cột như trên Google Sheets; lọc theo trạng thái, ưu tiên, hạn; tô màu việc quá hạn, sắp đến hạn; mở được tệp gốc trên Drive.
+- **Biểu theo dõi:** bảng 14 cột như trên Google Sheets; lọc theo trạng thái, ưu tiên, hạn; tô màu việc quá hạn, sắp đến hạn; mở được tệp gốc trên Drive. Thẻ tóm tắt (Đang mở, Hạn hôm nay, Đến ngày nhắc, Quá hạn) và bộ lọc "Cần làm ngay": việc chưa Đã xong/Hủy và (quá hạn, hoặc Hạn hoàn thành là hôm nay, hoặc hôm nay ≥ Ngày nhắc việc).
 - **Lịch công việc:** lịch tháng, tuần lấy từ chính biểu theo dõi (Ngày nhắc việc, Hạn hoàn thành) cùng lịch hẹn trên Google Calendar; cập nhật ngay khi biểu thay đổi.
 - **Kanban:** bốn cột Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong (Hủy ẩn); kéo thẻ sang cột khác thì trạng thái trên biểu đổi theo, lịch và lời nhắc cập nhật theo; trợ lý cập nhật qua chat thì thẻ tự chuyển cột.
 - **Một nguồn dữ liệu:** biểu theo dõi trên Google Sheets là nguồn gốc; web app, lịch, Kanban và trợ lý cùng đọc, ghi vào đó; mỗi thay đổi qua trợ lý hoặc web app có dòng truy vết ở trang `log` (sửa tay trên Sheets thì không).
-- **Xem trên điện thoại:** chủ mở được web app trên điện thoại. Không mở cổng ra Internet công cộng; cách truy cập từ xa chốt ở C16 (PLAN.md).
+- **Xem trên điện thoại:** chủ mở được web app trên điện thoại. Không mở cổng ra Internet công cộng; cách truy cập từ xa chốt ở D48 (PLAN.md).
 - Quản lý kết nối các kênh (màn 3 của bản thiết kế): Zalo cá nhân (tài khoản phụ, quét QR), bot Telegram (kết nối bằng token, chỉ chủ được nhắn); xem trạng thái, kiểm tra kết nối, đổi token, ngắt kết nối. Token nhập trên máy chạy agent, không hiển thị lại trên giao diện.
 - Xem tình trạng các kênh; xem việc và lịch; quản lý skill; quản lý danh sách cho phép; xử lý hàng chờ duyệt.
 - Giao diện tham chiếu: bản thiết kế "Khải Phiên Bản Số – Web quản lý" (liên kết ở PLAN.md mục 7).
-- `[CẦN CHỐT]` công nghệ, cách xác thực (C6); cách truy cập từ điện thoại (C16).
+- Công nghệ, xác thực: PLAN.md D47; truy cập từ điện thoại: D48; phạm vi thiết kế: D49.
 
 **Nghiệm thu** (bổ sung chi tiết khi bắt đầu gói)
 - [ ] Kéo một thẻ [TEST] sang "Đang xử lý" → Trạng thái trên Sheets đổi trong vòng vài giây, có dòng `log`.
 - [ ] Nhắn bot "xong văn bản [TEST]…" → thẻ sang cột Đã xong, sự kiện trên lịch được gỡ hoặc cập nhật.
 - [ ] Sửa tay hạn trên Sheets → lịch web app và Ngày nhắc việc đổi theo.
-- [ ] Mở web app trên điện thoại qua cách đã chốt ở C16; từ mạng ngoài không có quyền thì không vào được.
+- [ ] Mở web app trên điện thoại qua cách đã chốt ở D48; từ mạng ngoài không có quyền thì không vào được.
 
 ## 4. Ngoài phạm vi
 
@@ -198,7 +198,7 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 | Telegram: tình trạng pháp lý chưa rõ; không mã hóa đầu cuối | Văn bản gửi qua Telegram có thể bị lộ nếu tài khoản bị chiếm | Chủ đã chấp nhận cho văn bản thông thường; bật xác thực hai lớp cho Telegram; không gửi văn bản mật |
 | Bóc tách sai thông tin văn bản (ảnh mờ, scan kém, chữ có dấu) | Ghi sai hạn, sai số ký hiệu | Bắt buộc chủ xác nhận trước khi lưu; trường không chắc đánh dấu "(cần kiểm tra)"; luôn có link tệp gốc |
 | Lỡ gửi văn bản mật | Vi phạm khoản 5, 6 Điều 5 Luật Bảo vệ bí mật nhà nước 2018 | Chủ tự kiểm soát; trợ lý dừng khi thấy dấu độ mật; xóa ngay tệp đã lỡ tải lên |
-| Web app mở từ điện thoại | Lộ dữ liệu nếu truy cập từ xa sai cách | Chỉ qua mạng riêng (C16), có đăng nhập; không mở cổng ra Internet công cộng |
+| Web app mở từ điện thoại | Lộ dữ liệu nếu truy cập từ xa sai cách | Chỉ qua mạng riêng (D48), có đăng nhập; không mở cổng ra Internet công cộng |
 | Trợ lý đọc trang web có chỉ dẫn độc hại (Gói 2B) | Bị dẫn dắt ghi sai dữ liệu, lộ thông tin | Nội dung web là dữ liệu; xác nhận trước khi ghi; công cụ tra cứu, tạo tệp chỉ mở cho chủ; câu thử CB5 |
 | Trả lời tư vấn, pháp luật sai hoặc lỗi thời | Quyết định dựa trên thông tin sai | Bắt buộc dẫn nguồn và ngày; không nguồn thì nói rõ chưa kiểm chứng |
 | Tạo ảnh, tra cứu, tạo tệp dùng chung hạn mức ChatGPT với Codex lập trình | Chạm hạn mức, trợ lý báo lỗi | Theo dõi khi chạy thử; cân nhắc API key riêng (C7, C14) |
