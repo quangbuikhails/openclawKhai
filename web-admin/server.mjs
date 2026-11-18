@@ -14,7 +14,7 @@ if (!authReady() || !googleReady()) {
 // Tệp tĩnh: danh sách trắng, đọc một lần vào bộ nhớ.
 const TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8" };
 const STATIC = {};
-for (const [url, file] of [["/", "index.html"], ["/login", "login.html"], ["/app.js", "app.js"], ["/login.js", "login.js"], ["/style.css", "style.css"]]) {
+for (const [url, file] of [["/", "index.html"], ["/lich", "lich.html"], ["/login", "login.html"], ["/app.js", "app.js"], ["/lich.js", "lich.js"], ["/shared.js", "shared.js"], ["/login.js", "login.js"], ["/style.css", "style.css"]]) {
   STATIC[url] = { body: readFileSync(fileURLToPath(new URL(`./public/${file}`, import.meta.url))), type: TYPES[file.split(".").pop()] };
 }
 
@@ -102,8 +102,8 @@ async function handle(req, res, url) {
 
   const authed = validSession(req.headers.cookie);
 
-  if (path === "/" || path === "/app.js") {
-    if (!authed) return path === "/" ? send(res, 302, "", { Location: "/login" }) : send(res, 401, "");
+  if (path === "/" || path === "/lich" || path === "/app.js" || path === "/lich.js" || path === "/shared.js") {
+    if (!authed) return path === "/" || path === "/lich" ? send(res, 302, "", { Location: "/login" }) : send(res, 401, "");
     const f = STATIC[path];
     return send(res, 200, f.body, { "Content-Type": f.type, "Cache-Control": "no-cache" });
   }

@@ -93,3 +93,63 @@ tr.overdue td { background: var(--red-bg); } tr.remind td { background: var(--am
   .desktop-only { display: none !important; }
   .cards { display: block; }
 }
+
+/* ---- Lịch công việc (G4-04) ---- */
+.cal-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-nav { display: flex; gap: 8px; align-items: center; }
+.cal-nav h2 { margin: 0 6px; font-size: 22px; min-width: 150px; text-align: center; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { display: inline-block; padding: 4px 12px; border-radius: 999px; border: 1px solid; font-size: 13px; }
+.pill.hen { background: #e6effa; color: #1d4e89; border-color: #b9d0ee; }
+.pill.nhac { background: var(--amber-bg); color: var(--amber); border-color: #f0dc9c; }
+.pill.han { background: var(--red-bg); color: var(--red); border-color: #f2bcbc; }
+.cal-layout { display: flex; gap: 18px; align-items: flex-start; }
+.cal-main { flex: 1; min-width: 0; }
+.cal-side { width: 340px; flex: none; display: flex; flex-direction: column; gap: 14px; }
+.side-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.side-card h3 { margin: 8px 0; font-size: 18px; }
+.side-card .card-body div { grid-template-columns: 110px 1fr; }
+.cal-grid { display: grid; gap: 8px; }
+.cal-grid.month { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cal-grid.week { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.dow { text-align: center; color: var(--muted); font-weight: 600; padding: 4px 0; }
+.day { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 6px; min-height: 110px; min-width: 0; cursor: pointer; }
+.cal-grid.week .day { min-height: 220px; }
+.day.other { background: #eef0ec; opacity: .7; }
+.day.now { border: 2px solid var(--accent); background: #eef7f3; }
+.day.pick { outline: 2px solid var(--ink); }
+.day-head { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.day-items { display: flex; flex-direction: column; gap: 3px; }
+.dots { display: none; }
+.chip-item { display: block; width: 100%; text-align: left; border: 1px solid; border-radius: 6px; padding: 2px 6px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-item.hen { background: #e6effa; color: #1d4e89; border-color: #b9d0ee; }
+.chip-item.nhac { background: var(--amber-bg); color: var(--amber); border-color: #f0dc9c; }
+.chip-item.han { background: #fff; color: var(--red); border-color: #f2bcbc; }
+.chip-item.han.late { background: var(--red-bg); font-weight: 600; }
+.chip-item.nhac.warn { background: #fbe7a8; }
+.chip-item.on { outline: 2px solid var(--ink); }
+.up-row { display: grid; grid-template-columns: 70px 1fr; gap: 8px; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); padding: 8px 0; font: inherit; cursor: pointer; }
+.up-text { display: flex; flex-direction: column; font-size: 14px; }
+.kind.hen { color: #1d4e89; } .kind.nhac { color: var(--amber); } .kind.han { color: var(--red); }
+.side-card .chip-item { margin-bottom: 4px; font-size: 14px; padding: 6px 8px; }
+
+@media (max-width: 767px) {
+  .cal-layout { flex-direction: column; }
+  .cal-side { width: 100%; }
+  .cal-nav h2 { font-size: 18px; min-width: 0; flex: 1; }
+  .cal-nav { width: 100%; }
+  /* Tuần: danh sách theo ngày, T2 đến CN */
+  .cal-grid.week { grid-template-columns: 1fr; }
+  .cal-grid.week .day { min-height: 0; cursor: default; }
+  .cal-grid.week .chip-item { white-space: normal; font-size: 14px; padding: 6px 8px; }
+  .cal-grid.week .dots { display: none; }
+  /* Tháng: ô nhỏ, chấm màu; bấm ngày để xem danh sách */
+  .cal-grid.month { gap: 4px; }
+  .cal-grid.month .day { min-height: 54px; padding: 4px; }
+  .cal-grid.month .day-head { font-size: 12px; }
+  .cal-grid.month .day-head { overflow: hidden; }
+  .cal-grid.month .day-items { display: none; }
+  .cal-grid.month .dots { display: flex; flex-wrap: wrap; gap: 3px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: #1d4e89; display: inline-block; }
+  .dots i.dot-nhac { background: #d68a00; } .dots i.dot-han { background: #c0392b; }
+}

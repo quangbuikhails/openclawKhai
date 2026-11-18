@@ -158,7 +158,9 @@ function makeCache(loader) {
 export const getTasks = makeCache(loadTasks);
 
 // ---- Lịch: chỉ tiêu đề và giờ (D25, D47) ----
-const EVENT_FIELDS = "items(id,summary,status,start,end,extendedProperties/private/owner)";
+const EVENT_FIELDS = "items(id,summary,status,start,end,extendedProperties/private(owner,kind))";
+const SYNC_KINDS = new Set(["nhac", "han"]);
+const isSyncKind = (e) => e.extendedProperties?.private?.owner === CAL_OWNER && SYNC_KINDS.has(e.extendedProperties.private.kind);
 const eventCaches = new Map();
 export function getEvents(fromIso, toIso) {
   const key = `${fromIso}|${toIso}`;
@@ -172,7 +174,7 @@ export function getEvents(fromIso, toIso) {
           timeMax: `${toIso}T23:59:59+07:00`,
           singleEvents: "true",
           orderBy: "startTime",
-          maxResults: "50",
+          maxResults: "250",
           fields: EVENT_FIELDS,
         });
         const data = await googleGet(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?${p}`);
@@ -185,6 +187,8 @@ export function getEvents(fromIso, toIso) {
               start: e.start?.date ?? e.start?.dateTime ?? null,
               end: e.end?.date ?? e.end?.dateTime ?? null,
               by_assistant: e.extendedProperties?.private?.owner === CAL_OWNER,
+              // [Nhắc]/[Hạn] do server khai-mcp-google đồng bộ từ biểu (D28): có owner và kind nhac|han. Còn lại là lịch hẹn.
+              kind: isSyncKind(e) ? e.extendedProperties.private.kind : null,
             })),
         };
       }),

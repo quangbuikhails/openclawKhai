@@ -1,26 +1,10 @@
 // Giao diện Biểu theo dõi (chỉ đọc). Mọi văn bản từ Sheets gán bằng textContent, không dùng innerHTML.
-const COLUMNS = [
-  ["stt", "STT"], ["received_date", "Ngày nhận"], ["doc_title", "Tên văn bản"], ["doc_number", "Số ký hiệu"],
-  ["issuer", "Cơ quan ban hành"], ["action_required", "Nội dung cần xử lý"], ["owner", "Người phụ trách"],
-  ["due_date", "Hạn hoàn thành"], ["priority", "Ưu tiên"], ["status", "Trạng thái"], ["note", "Ghi chú"],
-  ["doc_link", "Tệp gốc"], ["doc_deadline", "Thời hạn trong văn bản"], ["remind_date", "Ngày nhắc việc"],
-];
+import { COLUMNS, el, fmtDate, WEEKDAY, addDays, rowClass, cellNode, taskDetails } from "/shared.js";
 const COMPACT = new Set(["stt", "doc_title", "doc_number", "due_date", "priority", "status", "doc_link"]);
-const DATE_KEYS = new Set(["received_date", "due_date", "doc_deadline", "remind_date"]);
 const POLL_MS = 12000;
 
 const state = { data: null, view: "open", prio: "", status: "", due: "", compact: false };
 const $ = (id) => document.getElementById(id);
-const el = (tag, cls, text) => {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
-};
-
-const fmtDate = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "");
-const WEEKDAY = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-const addDays = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
 const VIEWS = [
   ["open", "Đang mở", (r) => r.open, "open"],
@@ -52,32 +36,6 @@ function visibleRows() {
       const db = b.due_date ?? b.doc_deadline ?? "9999";
       return rank(a) - rank(b) || da.localeCompare(db) || Number(a.stt) - Number(b.stt);
     });
-}
-
-const rowClass = (r) => (r.overdue ? "overdue" : r.remind_due ? "remind" : "");
-
-function cellNode(r, key) {
-  if (key === "doc_link") {
-    if (!r.doc_link) return el("span", "muted", "—");
-    const a = el("a", "btn small", "Mở tệp");
-    a.href = r.doc_link;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    return a;
-  }
-  const raw = DATE_KEYS.has(key) ? fmtDate(r[key]) : r[key];
-  if (raw === null || raw === "") return el("span", "muted", "—");
-  const text = String(raw);
-  if (text.includes("(cần kiểm tra)")) {
-    const span = el("span");
-    text.split("(cần kiểm tra)").forEach((part, i, arr) => {
-      span.append(document.createTextNode(part));
-      if (i < arr.length - 1) span.append(el("b", "check", "(cần kiểm tra)"));
-    });
-    return span;
-  }
-  if (key === "status" || key === "priority") return el("span", `badge ${key}-${text.replaceAll(" ", "-")}`, text);
-  return document.createTextNode(text);
 }
 
 function renderTiles() {
@@ -141,17 +99,7 @@ function renderCards(rows) {
     const due = el("div", "card-due");
     due.append(el("span", "muted", "Hạn: "), document.createTextNode(fmtDate(r.due_date ?? r.doc_deadline) || "—"));
     s.append(top, title, due);
-    const body = el("dl", "card-body");
-    COLUMNS.filter(([k]) => !["stt", "doc_title", "status", "priority", "doc_link"].includes(k)).forEach(([k, label]) => {
-      const row = el("div");
-      const dd = el("dd");
-      dd.append(cellNode(r, k));
-      row.append(el("dt", "", label), dd);
-      body.append(row);
-    });
-    const link = el("div", "card-link");
-    link.append(cellNode(r, "doc_link"));
-    d.append(s, body, link);
+    d.append(s, taskDetails(r));
     return d;
   }));
 }
