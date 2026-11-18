@@ -166,6 +166,22 @@ Container `khai-web-admin`, cổng `127.0.0.1:28801`, mạng riêng `khai-pbs-we
 
 4. Dừng, bật lại hay cập nhật mã: chỉ thao tác với `web-admin`. Sửa mã trong `web-admin/` thì chạy `up -d --force-recreate --no-deps web-admin` (tệp tĩnh đọc một lần lúc khởi động; `up -d` thường không làm gì khi cấu hình không đổi); dừng: `stop web-admin`. Đổi mật khẩu: chạy lại bước 2 với `--ghi-de` rồi tạo lại container (phiên cũ mất hiệu lực vì khóa phiên đổi).
 
+## Truy cập từ điện thoại (Tailscale; G4-05, D48)
+
+Tailscale cài trên Windows (không cài trong WSL), tailnet gói Personal, 2 máy: desktop-5ofd6fr (100.126.218.63, Windows), iphone-15-pro-max (100.112.123.77, iOS). MagicDNS và HTTPS Certificates đã bật. Địa chỉ: `https://desktop-5ofd6fr.tail7d6c8a.ts.net` (chỉ trong tailnet). Không dùng Funnel, không mở cổng router.
+
+Chạy trong PowerShell trên Windows:
+
+```powershell
+tailscale serve status                                  # xem cấu hình hiện có
+tailscale serve --bg http://127.0.0.1:28801             # bật lại
+tailscale serve --https=443 off                         # tắt
+```
+
+Chính sách tailnet (Access controls): không dùng mặc định cho phép tất cả; chỉ một grant `src 100.112.123.77` → `dst 100.126.218.63`, `ip tcp:443`; tests: accept `100.126.218.63:443`, deny `100.126.218.63:3389`, `:445`, `:28789`. Thêm thiết bị mới (điện thoại, máy tính khác) thì phải thêm địa chỉ của nó vào `src` của grant, nếu không máy đó không vào được. Quay lui chính sách: Logs → Configuration trong trang quản trị Tailscale (bản cũ trước G4-05 anh Khải còn lưu ở tệp tailscale-policy-cu.txt trên máy). Không bật Funnel: Funnel đưa trang ra Internet, trái D18.
+
+Kiểm sau khi đổi: iPhone bật Tailscale mở được trang; tắt Tailscale, dùng 4G thì không vào được. `tailscale serve --bg` còn sau khi khởi động lại Windows hay không: kiểm ở lần khởi động lại tới.
+
 ## MCP Google (G2-01B, spike)
 
 Server MCP nhỏ (`mcp-google/server.mjs`) chạy ở container riêng `khai-mcp-google`, dùng lại image OpenClaw đang ghim digest (Node và SDK MCP có sẵn trong `/app/node_modules`, không thêm package). HTTP trong mạng `khai-pbs_default`, không publish cổng. Chỉ thao tác đúng một bảng tính và một lịch theo `SPREADSHEET_ID`, `CALENDAR_ID` trong `secrets/mcp-google.env` (đổi tên từ `TEST_SPREADSHEET_ID`, `TEST_CALENDAR_ID` ở G2-04: phải sửa tệp này trước khi chạy lại). `SHEET_MODE`, `CAL_MODE` (`test` mặc định, hoặc `prod`) phải khớp tên bảng tính, lịch; chế độ `test` chỉ ghi vào việc có Nội dung cần xử lý bắt đầu `[TEST]`. Công cụ: `task_list`, `task_add`, `task_set_status`, `task_set_due`, `date_today`, `cal_*`; không có công cụ xóa dòng. `cal_create`, `cal_update`, `cal_delete` chỉ tác động sự kiện do trợ lý tạo (dấu `private.owner`, PLAN.md D25), sự kiện chủ tự tạo chỉ đọc; `CAL_MODE=test` bắt buộc tiêu đề bắt đầu `[TEST]`.
