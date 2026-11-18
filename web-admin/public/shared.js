@@ -1,11 +1,11 @@
 // Phần dùng chung của Biểu theo dõi và Lịch. Mọi văn bản từ Sheets gán bằng textContent, không dùng innerHTML.
-const COLUMNS = [
+export const COLUMNS = [
   ["stt", "STT"], ["received_date", "Ngày nhận"], ["doc_title", "Tên văn bản"], ["doc_number", "Số ký hiệu"],
   ["issuer", "Cơ quan ban hành"], ["action_required", "Nội dung cần xử lý"], ["owner", "Người phụ trách"],
   ["due_date", "Hạn hoàn thành"], ["priority", "Ưu tiên"], ["status", "Trạng thái"], ["note", "Ghi chú"],
   ["doc_link", "Tệp gốc"], ["doc_deadline", "Thời hạn trong văn bản"], ["remind_date", "Ngày nhắc việc"],
 ];
-const DATE_KEYS = new Set(["received_date", "due_date", "doc_deadline", "remind_date"]);
+export const DATE_KEYS = new Set(["received_date", "due_date", "doc_deadline", "remind_date"]);
 
 export const el = (tag, cls, text) => {
   const e = document.createElement(tag);

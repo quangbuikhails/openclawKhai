@@ -1,6 +1,7 @@
 // Máy chủ web chỉ đọc cho Biểu theo dõi (G4-02, PLAN.md D47). Không có đường ghi lên Google.
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { authReady, checkPassword, makeSession, validSession, recordLogin, lockRemaining, COOKIE, SESSION_HOURS } from "./auth.mjs";
 import { getTasks, getEvents, googleReady, todayIso, stats } from "./google.mjs";
@@ -15,7 +16,8 @@ if (!authReady() || !googleReady()) {
 const TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8" };
 const STATIC = {};
 for (const [url, file] of [["/", "index.html"], ["/lich", "lich.html"], ["/login", "login.html"], ["/app.js", "app.js"], ["/lich.js", "lich.js"], ["/shared.js", "shared.js"], ["/login.js", "login.js"], ["/style.css", "style.css"]]) {
-  STATIC[url] = { body: readFileSync(fileURLToPath(new URL(`./public/${file}`, import.meta.url))), type: TYPES[file.split(".").pop()] };
+  const body = readFileSync(fileURLToPath(new URL(`./public/${file}`, import.meta.url)));
+  STATIC[url] = { body, type: TYPES[file.split(".").pop()], etag: `"${createHash("sha256").update(body).digest("base64url").slice(0, 22)}"` };
 }
 
 const SECURITY = {
@@ -28,6 +30,12 @@ const SECURITY = {
 const send = (res, status, body, headers = {}) => {
   res.writeHead(status, { ...SECURITY, ...headers });
   res.end(body);
+};
+// Tệp tĩnh: no-cache (trình duyệt luôn hỏi lại) kèm ETag; nội dung không đổi thì trả 304 để không tải lại.
+const sendStatic = (req, res, f) => {
+  const headers = { "Content-Type": f.type, "Cache-Control": "no-cache", ETag: f.etag };
+  if (req.headers["if-none-match"] === f.etag) return send(res, 304, "", headers);
+  return send(res, 200, f.body, headers);
 };
 const json = (res, status, obj, headers = {}) => send(res, status, JSON.stringify(obj), { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers });
 
@@ -96,16 +104,14 @@ async function handle(req, res, url) {
   if (method !== "GET" && method !== "HEAD") return json(res, 405, { error: "Chỉ đọc" }, { Allow: "GET, HEAD" });
 
   if (path === "/login" || path === "/login.js" || path === "/style.css") {
-    const f = STATIC[path];
-    return send(res, 200, f.body, { "Content-Type": f.type, "Cache-Control": "no-cache" });
+    return sendStatic(req, res, STATIC[path]);
   }
 
   const authed = validSession(req.headers.cookie);
 
   if (path === "/" || path === "/lich" || path === "/app.js" || path === "/lich.js" || path === "/shared.js") {
     if (!authed) return path === "/" || path === "/lich" ? send(res, 302, "", { Location: "/login" }) : send(res, 401, "");
-    const f = STATIC[path];
-    return send(res, 200, f.body, { "Content-Type": f.type, "Cache-Control": "no-cache" });
+    return sendStatic(req, res, STATIC[path]);
   }
 
   if (path === "/api/tasks" || path === "/api/events") {
