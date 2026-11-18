@@ -218,9 +218,13 @@ async function locate(sttValue) {
 }
 
 // Kiểm tra lại ngay trước khi ghi: dòng đó vẫn là STT đó (anh có thể vừa sắp xếp, chèn dòng).
-async function stillSameRow(rec) {
-  const v = await readRange(`${SHEET_TAB}!A${rec.row}`);
-  return Number(v[0]?.[0]) === rec.stt;
+// withStatus (đường web, có expected): đọc A:J và so cả Trạng thái với giá trị vừa đọc, để thu hẹp khe với sửa tay.
+async function stillSameRow(rec, withStatus = false) {
+  const v = await readRange(withStatus ? `${SHEET_TAB}!A${rec.row}:J${rec.row}` : `${SHEET_TAB}!A${rec.row}`);
+  if (Number(v[0]?.[0]) !== rec.stt) return false;
+  if (!withStatus) return true;
+  const cur = v[0]?.[COLS.indexOf("status")];
+  return (cur === undefined || cur === null || cur === "" ? null : String(cur)) === (rec.status ?? null);
 }
 
 // Chế độ test: chỉ động vào việc có "Nội dung cần xử lý" bắt đầu [TEST].
@@ -440,7 +444,7 @@ async function setStatus({ stt: sttValue, status, channel: ch, expected }) {
     return { kind: "conflict", error: "Trạng thái đã bị đổi ở nơi khác", current: rec.status ?? null };
   }
   if (rec.status === status) return { data: { stt: sttValue, unchanged: true, ...(await syncAfterWrite(rec)) } };
-  if (!(await stillSameRow(rec))) return { kind: "conflict", error: "Biểu vừa thay đổi, thử lại" };
+  if (!(await stillSameRow(rec, expected !== undefined))) return { kind: "conflict", error: "Biểu vừa thay đổi, thử lại" };
   await writeCell(COL_LETTER.status, rec.row, status);
   const logged = await writeLog(ch, status === "Hủy" ? "huy" : "doi_trang_thai", sttValue, `${rec.status ?? "(trống)"} → ${status}`);
   return { data: { stt: sttValue, status, ...logged, ...(await syncAfterWrite({ ...rec, status })) } };

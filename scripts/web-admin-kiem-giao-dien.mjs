@@ -61,6 +61,8 @@ class Node_ {
   addEventListener(t, f) { (this.listeners[t] ??= []).push(f); }
   setAttribute(k, v) { this.attrs[k] = v; }
   closest() { return null; }
+  contains(n) { return this === n || this.children.some((c) => c.contains(n)); }
+  setPointerCapture() {}
   scrollIntoView() {}
   get tHead() { return (this._head ??= new Node_("thead")); }
   get tBodies() { return [(this._body ??= new Node_("tbody"))]; }
@@ -93,6 +95,7 @@ const events = { fetched_at: now, stale: false, events: [{ id: "e1", summary: "H
 const logBody = { fetched_at: now, stale: false, entries: [{ time: "2026-11-18T14:05", channel: "web", action: "doi_trang_thai", stt: 2, summary: "Đang xử lý → Chờ ý kiến" }] };
 const posts = []; // các yêu cầu ghi đã gửi
 let postMode = "ok";
+let tasksFail = false; // GET /api/tasks lỗi (thử 409 khi tải lại cũng lỗi)
 globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
   if (opts.method === "POST" && u === "/api/task-status") {
@@ -100,8 +103,12 @@ globalThis.fetch = async (url, opts = {}) => {
     if (postMode === "net") throw new Error("mất mạng");
     if (postMode === "409") return { ok: false, status: 409, json: async () => ({ error: "đổi ở nơi khác", current: "Đang xử lý" }) };
     if (postMode === "502") return { ok: false, status: 502, json: async () => ({ error: "Chưa ghi được, thử lại sau" }) };
-    return { ok: true, status: 200, json: async () => ({ ok: true, calendar: { created: 0, moved: 0, deleted: 1 }, log_warning: false }) };
+    const sent = JSON.parse(opts.body);
+    tasks.rows.find((r) => Number(r.stt) === sent.stt).status = sent.to; // như Sheets sau khi ghi: lần đọc kế tiếp thấy trạng thái mới
+    const calendar = postMode === "nocal" ? { created: 0, moved: 0, deleted: 0 } : { created: 0, moved: 0, deleted: 1 };
+    return { ok: true, status: 200, json: async () => ({ ok: true, calendar, log_warning: false }) };
   }
+  if (tasksFail && u.startsWith("/api/tasks")) throw new Error("mất mạng");
   const body = u.startsWith("/api/tasks") ? tasks : u.startsWith("/api/events") ? events : u.startsWith("/api/log") ? logBody : null;
   if (!body) throw new Error(`fetch lạ: ${u}`);
   return { ok: true, status: 200, json: async () => body };
@@ -142,7 +149,14 @@ try {
   try {
     const { shiftStatus, columnAt, KANBAN } = await import(pathToFileURL(join(tmp, "shared.js")));
     check(shiftStatus("Chưa xử lý", -1) === null && shiftStatus("Đã xong", 1) === null && shiftStatus("Đang xử lý", 1) === "Chờ ý kiến" && shiftStatus("Hủy", 1) === null, "shared.js: shiftStatus chặn mép và Hủy");
-    check(columnAt([{ left: 0, right: 99 }, { left: 100, right: 199 }], 150) === 1 && columnAt([{ left: 0, right: 99 }], 500) === -1, "shared.js: columnAt");
+    {
+      const mk = (hit) => ({ closest: (sel) => (sel === ".kcol" ? hit : null), contains: () => false });
+      const colA = mk(null), colB = mk(null);
+      colA.closest = (sel) => (sel === ".kcol" ? colA : null);
+      colB.closest = (sel) => (sel === ".kcol" ? colB : null);
+      const card = { closest: (sel) => (sel === ".kcol" ? colA : null), contains: (n) => n === card };
+      check(columnAt([card, colB], [colA, colB], card) === 1 && columnAt([card, { closest: () => null }], [colA, colB], card) === -1 && columnAt([], [colA, colB], card) === -1, "shared.js: columnAt bỏ qua thẻ đang kéo, -1 khi ngoài cột");
+    }
     check(KANBAN.length === 4 && !KANBAN.includes("Hủy"), "shared.js: Kanban đúng bốn cột, không Hủy");
 
     await import(pathToFileURL(join(tmp, "kanban.js")));
@@ -184,6 +198,69 @@ try {
     await click(arrow(2, 0));
     check(stts(2) === "2" && notice().startsWith("notice err") && notice().includes("giữ nguyên"), "kanban.js: lỗi 502 hoàn tác");
     check(posts.length === 4, `kanban.js: tổng 4 yêu cầu ghi (đúng ${posts.length})`);
+
+    // 409 mà lần tải lại cũng lỗi: thẻ vẫn phải về cột cũ, không kẹt "Đang ghi…"
+    postMode = "409"; tasksFail = true;
+    await click(arrow(2, 1));
+    tasksFail = false;
+    check(stts(2) === "2" && stts(3) === "", "kanban.js: 409 và tải lại lỗi, thẻ vẫn về cột cũ");
+    // Đổi cột mà việc không có sự kiện lịch nào: không được nói lịch "giữ nguyên hai sự kiện"
+    postMode = "nocal";
+    await click(arrow(2, 1));
+    check(notice().includes("lịch không cần đổi") && !notice().includes("hai sự kiện"), `kanban.js: thông báo khi không có sự kiện lịch (${notice()})`);
+    postMode = "ok";
+
+    // Kéo thả: cột đích theo phần tử dưới con trỏ ở ba bố cục (4 cột ngang, 2x2, 1 cột), thả vào từng cột
+    const layouts = {
+      "4 cột": (i) => ({ x: i * 100 + 50, y: 50 }),
+      "2×2": (i) => ({ x: (i % 2) * 100 + 50, y: Math.floor(i / 2) * 100 + 50 }),
+      "1 cột": (i) => ({ x: 50, y: i * 100 + 50 }),
+    };
+    const cardOf = (stt) => find(q("board"), "kcard").find((c) => sttOf(c) === String(stt));
+    const fire = async (node, type, e) => { for (const f of node.listeners[type] ?? []) await f({ pointerId: 1, pointerType: "mouse", button: 0, buttons: 1, target: { closest: () => null }, ...e }); };
+    const saveQuery = document.querySelectorAll;
+    try {
+      for (const [name, at] of Object.entries(layouts)) {
+        for (const target of [2, 3, 0, 1]) {
+          const cols = q("board").children;
+          cols.forEach((c) => { c.closest = (sel) => (sel === ".kcol" ? c : null); });
+          const card = cardOf(1);
+          const origin = cols.find((c) => find(c, "kcard").includes(card));
+          card.closest = (sel) => (sel === ".kcol" ? origin : null); // như thật: thẻ đang kéo vẫn nằm trong cột gốc
+          document.querySelectorAll = () => cols;
+          document.elementsFromPoint = (x, y) => {
+            const hit = cols.find((_, i) => { const p = at(i); return x >= p.x - 50 && x < p.x + 50 && y >= p.y - 50 && y < p.y + 50; });
+            return hit ? [card, hit] : [card];
+          };
+          const before = posts.length;
+          const p0 = at(cols.indexOf(origin)), p1 = at(target);
+          await fire(card, "pointerdown", { clientX: p0.x, clientY: p0.y });
+          await fire(card, "pointermove", { clientX: p1.x, clientY: p1.y });
+          await fire(card, "pointerup", { clientX: p1.x, clientY: p1.y });
+          await settle();
+          check(posts.length === before + 1 && posts.at(-1).to === KANBAN[target], `kanban.js: bố cục ${name}, thả vào cột ${KANBAN[target]} → ${posts.at(-1)?.to ?? "(không gửi)"}`);
+        }
+      }
+      // Thả vào chỗ không thuộc cột nào, hoặc chuột đã nhả ngoài thẻ (buttons 0): không gửi gì
+      const cols = q("board").children;
+      cols.forEach((c) => { c.closest = (sel) => (sel === ".kcol" ? c : null); });
+      const card = cardOf(1);
+      card.closest = () => cols[1];
+      document.querySelectorAll = () => cols;
+      document.elementsFromPoint = () => [card];
+      const before = posts.length;
+      await fire(card, "pointerdown", { clientX: 0, clientY: 0 });
+      await fire(card, "pointermove", { clientX: 900, clientY: 900 });
+      await fire(card, "pointerup", { clientX: 900, clientY: 900 });
+      await settle();
+      document.elementsFromPoint = () => [card, cols[3]];
+      await fire(card, "pointerdown", { clientX: 0, clientY: 0 });
+      await fire(card, "pointermove", { clientX: 300, clientY: 0, buttons: 0 }); // đã nhả chuột ngoài thẻ
+      await fire(card, "pointermove", { clientX: 320, clientY: 0, buttons: 1 });
+      await fire(card, "pointerup", { clientX: 320, clientY: 0 });
+      await settle();
+      check(posts.length === before, "kanban.js: thả ngoài cột hoặc chuột đã nhả (buttons=0): không gửi yêu cầu");
+    } finally { document.querySelectorAll = saveQuery; }
   } catch (e) { check(false, `kanban.js: ${e.stack ?? e.message}`); }
 } finally {
   rmSync(tmp, { recursive: true, force: true });

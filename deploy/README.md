@@ -171,6 +171,7 @@ Container `khai-web-admin`, cổng `127.0.0.1:28801`, mạng riêng `khai-pbs-we
 - `WEB_TOKEN` (≥32 ký tự, khác `MCP_GOOGLE_TOKEN`, `BRIEF_TOKEN`) và `WEB_ORIGIN=http://khai-web-admin` có trong **cả hai** tệp `secrets/mcp-google.env` và `secrets/web-admin.env`. Thiếu một trong hai thì mcp tắt đường `/web`, web chỉ đọc.
 - Sinh token: `t=$(openssl rand -hex 32); printf 'WEB_TOKEN=%s\nWEB_ORIGIN=http://khai-web-admin\n' "$t" | tee -a secrets/mcp-google.env secrets/web-admin.env >/dev/null; unset t`.
 - Thứ tự đưa lên: (1) lưu `docker logs -t khai-mcp-google > ~/khai-mcp-google-$(date +%F-%H%M).log 2>&1`; (2) tạo lại `khai-mcp-google` (lệnh ở mục "Chính sách khởi động lại"), việc này tạo mạng `khai-pbs-write`; kiểm `docker logs khai-mcp-google` có `web: bật`; (3) tạo lại `web-admin` (`up -d --force-recreate --no-deps web-admin`). Quay lui: `git revert` rồi tạo lại hai container theo thứ tự trên; `WEB_TOKEN` thừa trong tệp env vô hại.
+- `MCP_WRITE_URL` (địa chỉ khai-mcp-google cho đường ghi) khai báo trong `deploy/docker-compose.web-admin.yml`, mặc định `http://khai-mcp-google:3000`; chỉ đổi khi tên container hoặc cổng đổi.
 - Kiểm: `/web/task-status` thiếu Origin hoặc sai Origin trả 403; `MCP_GOOGLE_TOKEN` gọi `/web/...` trả 401; `WEB_TOKEN` gọi `/mcp` trả 401.
 
 ## Truy cập từ điện thoại (Tailscale; G4-05, D48)

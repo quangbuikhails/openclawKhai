@@ -12,6 +12,7 @@ services:
       - ${HOME}/projects/khai-phien-ban-so/secrets/web-admin.env
     environment:
       TZ: Asia/Ho_Chi_Minh
+      MCP_WRITE_URL: http://khai-mcp-google:3000
     volumes:
       - ${HOME}/projects/khai-phien-ban-so/web-admin:/app/web-admin:ro
       # Gắn thư mục (không gắn tệp đơn lẻ), chỉ chứa khóa SA chỉ đọc.

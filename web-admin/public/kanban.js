@@ -182,7 +182,7 @@ function calendarText(r) {
   if (r.calendar?.deleted) return `Đã ghi Sheets; gỡ ${r.calendar.deleted} sự kiện [Nhắc]/[Hạn] trên lịch.`;
   if (r.calendar?.created) return `Đã ghi Sheets; tạo lại ${r.calendar.created} sự kiện trên lịch.`;
   if (r.calendar?.moved) return `Đã ghi Sheets; dời ${r.calendar.moved} sự kiện trên lịch.`;
-  return "Đã ghi Sheets; lịch giữ nguyên hai sự kiện.";
+  return "Đã ghi Sheets; lịch không cần đổi.";
 }
 
 // Đổi trạng thái việc stt sang cột to. Cùng cột thì không gửi gì.
@@ -218,6 +218,7 @@ async function move(stt, to) {
   }
   if (res.status === 409) {
     state.pending.delete(stt);
+    render();
     await poll();
     return setNotice("err", `STT ${stt} vừa được đổi ở nơi khác${body.current ? ` sang "${body.current}"` : ""}; chưa ghi gì, đã tải lại.`);
   }
@@ -228,13 +229,15 @@ async function move(stt, to) {
 function attachDrag(cardEl, stt) {
   cardEl.addEventListener("pointerdown", (e) => {
     if (e.button !== 0 || e.target.closest("button") || state.drag) return;
-    const d = { stt, el: cardEl, id: e.pointerId, x0: e.clientX, y0: e.clientY, active: false, touch: e.pointerType !== "mouse", timer: null, rects: null };
+    const d = { stt, el: cardEl, id: e.pointerId, x0: e.clientX, y0: e.clientY, active: false, touch: e.pointerType !== "mouse", timer: null };
     state.drag = d;
+    try { cardEl.setPointerCapture(e.pointerId); } catch {} // chuột nhả ngoài thẻ vẫn gửi pointerup về thẻ
     if (d.touch) d.timer = setTimeout(() => begin(d), HOLD_MS);
   });
   cardEl.addEventListener("pointermove", (e) => {
     const d = state.drag;
     if (!d || d.el !== cardEl || e.pointerId !== d.id) return;
+    if (!d.touch && e.buttons === 0) return void cancel(d); // nhả chuột ngoài thẻ: không để kéo "kẹt"
     const dist = Math.hypot(e.clientX - d.x0, e.clientY - d.y0);
     if (!d.active) {
       if (!d.touch && dist > 6) begin(d);
@@ -242,8 +245,9 @@ function attachDrag(cardEl, stt) {
       if (!d.active) return;
     }
     d.el.style.transform = `translate(${e.clientX - d.x0}px, ${e.clientY - d.y0}px)`;
-    const idx = columnAt(d.rects, e.clientX);
-    document.querySelectorAll(".kcol").forEach((c, i) => c.classList.toggle("drop", i === idx));
+    const cols = [...document.querySelectorAll(".kcol")];
+    const idx = columnAt(document.elementsFromPoint(e.clientX, e.clientY), cols, d.el);
+    cols.forEach((c, i) => c.classList.toggle("drop", i === idx));
     d.target = idx;
   });
   const end = (e, commit) => {
@@ -260,10 +264,8 @@ function attachDrag(cardEl, stt) {
 function begin(d) {
   if (state.drag !== d) return;
   d.active = true;
-  d.rects = [...document.querySelectorAll(".kcol")].map((c) => c.getBoundingClientRect());
   d.target = -1;
   d.el.classList.add("dragging");
-  try { d.el.setPointerCapture(d.id); } catch {}
 }
 
 function cancel(d) {
