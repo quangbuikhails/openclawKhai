@@ -7,6 +7,7 @@
 ## Đang làm
 
 - G2C-05 Chạy thử 1 tuần với văn bản thật, nghiệm thu Gói 2C.
+- G4-03 Kanban: mã ở nhánh g4-03-kanban (commit 89eca7d), đã thử với bảng [TEST], chờ goi2c-v1 để đưa lên (dự kiến chiều 21/11).
 
 ## Gói 1 — Hạ tầng
 
