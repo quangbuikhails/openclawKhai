@@ -1,7 +1,7 @@
 // Kiểm giao diện web-admin ngoại tuyến, không thêm package (G4-04 sửa lỗi).
 // Chạy: docker run --rm --network none --entrypoint node -v "$PWD:/r:ro" "$OPENCLAW_IMAGE" /r/scripts/web-admin-kiem-giao-dien.mjs
 // 1) Mọi tên được import từ module nội bộ đều có export. 2) Không nạp tài nguyên ngoài (CSP default-src 'self').
-// 3) Nạp app.js và lich.js như ES module với DOM giả tối thiểu, chạy hết bước vẽ.
+// 3) Nạp app.js, lich.js, kanban.js như ES module với DOM giả tối thiểu, chạy hết bước vẽ; Kanban: đổi cột, hoàn tác khi lỗi, 409, cùng cột.
 import { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -39,19 +39,21 @@ for (const f of files.filter((x) => /\.(html|css)$/.test(x))) {
   check(ext.length === 0, `${f}: không nạp tài nguyên ngoài${ext.length ? ` (${ext.join("; ")})` : ""}`);
 }
 
-// ---- 2b) liên kết điều hướng giữa hai trang; điện thoại không được ẩn thanh điều hướng ----
-for (const [file, other, self] of [["index.html", "/lich", "/"], ["lich.html", "/", "/lich"]]) {
+// ---- 2b) liên kết điều hướng giữa ba trang; điện thoại không được ẩn thanh điều hướng ----
+const PAGES = [["index.html", "/"], ["lich.html", "/lich"], ["kanban.html", "/kanban"]];
+for (const [file, self] of PAGES) {
   const nav = readFileSync(join(PUBLIC, file), "utf8").match(/<nav>[\s\S]*?<\/nav>/)?.[0] ?? "";
-  check(nav.includes(`href="${other}"`), `${file}: có liên kết sang ${other}`);
+  for (const [, other] of PAGES.filter(([f]) => f !== file)) check(nav.includes(`href="${other}"`), `${file}: có liên kết sang ${other}`);
   check(new RegExp(`class="nav-item active" href="${self}"`).test(nav), `${file}: mục đang mở được tô (active)`);
 }
+check(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write/.test(readFileSync(join(PUBLIC, "kanban.js"), "utf8").replace(/\/\/.*$/gm, "")), "kanban.js: không dùng innerHTML (văn bản từ Sheets gán bằng textContent)");
 const phoneCss = readFileSync(join(PUBLIC, "style.css"), "utf8").match(/@media \(max-width: 767px\) \{[\s\S]*$/)?.[0] ?? "";
 check(!/\.sidebar nav[^{]*\{[^}]*display:\s*none/.test(phoneCss), "style.css: khổ điện thoại không ẩn thanh điều hướng");
 check(/\.sidebar nav\s*\{[^}]*display:\s*flex/.test(phoneCss), "style.css: khổ điện thoại hiện thanh điều hướng");
 
 // ---- 3) DOM giả ----
 class Node_ {
-  constructor(tag = "#text") { this.tag = tag; this.children = []; this.attrs = {}; this.listeners = {}; this.className = ""; this._text = ""; this.hidden = false; this.href = ""; this.value = ""; this.style = {}; }
+  constructor(tag = "#text") { this.tag = tag; this.children = []; this.attrs = {}; this.listeners = {}; this.className = ""; this._text = ""; this.hidden = false; this.href = ""; this.value = ""; this.style = {}; this.dataset = {}; }
   get textContent() { return this._text + this.children.map((c) => c.textContent).join(""); }
   set textContent(v) { this._text = String(v); this.children = []; }
   append(...n) { this.children.push(...n.map((x) => (typeof x === "string" ? Object.assign(new Node_(), { _text: x }) : x))); }
@@ -72,6 +74,7 @@ globalThis.document = {
   createTextNode: (t) => Object.assign(new Node_(), { _text: String(t) }),
   createDocumentFragment: () => new Node_("#frag"),
   addEventListener() {},
+  querySelectorAll: () => [],
 };
 globalThis.matchMedia = () => ({ matches: false });
 globalThis.location = { replace() {} };
@@ -82,13 +85,25 @@ const rec = (o) => ({ row: 2, stt: "1", received_date: null, doc_title: "Việc 
 const today = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
 const tasks = {
   fetched_at: now, stale: false, today, spreadsheet_url: "https://docs.google.com/spreadsheets/d/x/edit",
-  rows: [rec({ row: 2, stt: "1", due_date: today, remind_date: today, remind_due: true, due_today: true, urgent: true }), rec({ row: 3, stt: "2", due_date: today, doc_title: null, status: "Chờ ý kiến" })],
+  can_write: true,
+  rows: [rec({ row: 2, stt: "1", due_date: today, remind_date: today, remind_due: true, due_today: true, urgent: true }), rec({ row: 3, stt: "2", due_date: today, doc_title: null, status: "Chờ ý kiến" }), rec({ row: 4, stt: "3", status: "Hủy", open: false })],
   counts: { all: 2, open: 2, urgent: 1, overdue: 0, due_today: 2, remind_due: 1, done: 0 },
 };
 const events = { fetched_at: now, stale: false, events: [{ id: "e1", summary: "Họp thử", start: `${today}T09:00:00+07:00`, end: `${today}T10:00:00+07:00`, by_assistant: false, kind: null }, { id: "e2", summary: "[Hạn] đồng bộ", start: today, end: today, by_assistant: true, kind: "han" }] };
-globalThis.fetch = async (url) => {
-  const body = String(url).startsWith("/api/tasks") ? tasks : String(url).startsWith("/api/events") ? events : null;
-  if (!body) throw new Error(`fetch lạ: ${url}`);
+const logBody = { fetched_at: now, stale: false, entries: [{ time: "2026-11-18T14:05", channel: "web", action: "doi_trang_thai", stt: 2, summary: "Đang xử lý → Chờ ý kiến" }] };
+const posts = []; // các yêu cầu ghi đã gửi
+let postMode = "ok";
+globalThis.fetch = async (url, opts = {}) => {
+  const u = String(url);
+  if (opts.method === "POST" && u === "/api/task-status") {
+    posts.push(JSON.parse(opts.body));
+    if (postMode === "net") throw new Error("mất mạng");
+    if (postMode === "409") return { ok: false, status: 409, json: async () => ({ error: "đổi ở nơi khác", current: "Đang xử lý" }) };
+    if (postMode === "502") return { ok: false, status: 502, json: async () => ({ error: "Chưa ghi được, thử lại sau" }) };
+    return { ok: true, status: 200, json: async () => ({ ok: true, calendar: { created: 0, moved: 0, deleted: 1 }, log_warning: false }) };
+  }
+  const body = u.startsWith("/api/tasks") ? tasks : u.startsWith("/api/events") ? events : u.startsWith("/api/log") ? logBody : null;
+  if (!body) throw new Error(`fetch lạ: ${u}`);
   return { ok: true, status: 200, json: async () => body };
 };
 
@@ -122,6 +137,54 @@ try {
     check(text.includes("[Nhắc]") && text.includes("[Hạn]"), "lich.js: có mốc [Nhắc], [Hạn] từ biểu");
     check(q("upList").children.length >= 3, `lich.js: 7 ngày tới có ${q("upList").children.length} mục`);
   } catch (e) { check(false, `lich.js: ${e.message}`); }
+
+  byId.clear();
+  try {
+    const { shiftStatus, columnAt, KANBAN } = await import(pathToFileURL(join(tmp, "shared.js")));
+    check(shiftStatus("Chưa xử lý", -1) === null && shiftStatus("Đã xong", 1) === null && shiftStatus("Đang xử lý", 1) === "Chờ ý kiến" && shiftStatus("Hủy", 1) === null, "shared.js: shiftStatus chặn mép và Hủy");
+    check(columnAt([{ left: 0, right: 99 }, { left: 100, right: 199 }], 150) === 1 && columnAt([{ left: 0, right: 99 }], 500) === -1, "shared.js: columnAt");
+    check(KANBAN.length === 4 && !KANBAN.includes("Hủy"), "shared.js: Kanban đúng bốn cột, không Hủy");
+
+    await import(pathToFileURL(join(tmp, "kanban.js")));
+    await settle();
+    const q = (id) => document.getElementById(id);
+    const find = (n, cls) => (n.className.split(" ").includes(cls) ? [n] : []).concat(...n.children.map((c) => find(c, cls)));
+    const colCards = (i) => find(q("board").children[i], "kcard");
+    const sttOf = (c) => find(c, "k-top")[0].children[0].textContent.replace("STT ", "");
+    const stts = (i) => colCards(i).map(sttOf).join(",");
+    const arrow = (stt, which) => {
+      for (const c of find(q("board"), "kcard")) if (sttOf(c) === String(stt)) return find(c, "k-arrow")[which];
+    };
+    const click = async (b) => { for (const f of b.listeners.click ?? []) await f(); await settle(); };
+    const notice = () => `${q("notice").className}|${q("notice").textContent}`;
+
+    check(q("board").children.length === 4, "kanban.js: bốn cột");
+    check(stts(0) === "1" && stts(1) === "" && stts(2) === "2" && stts(3) === "", `kanban.js: thẻ đúng cột (Chưa xử lý: ${stts(0)}; Chờ ý kiến: ${stts(2)}), Hủy bị ẩn`);
+    check(q("hidden").textContent.includes("1 việc"), "kanban.js: ghi chú số việc Hủy bị ẩn");
+    check(q("log").children.length === 1 && q("log").textContent.includes("Web · Kanban"), "kanban.js: nhật ký hiện dòng log web");
+    check(arrow(1, 0).disabled === true && arrow(2, 1).disabled === false, "kanban.js: nút ‹ ở cột đầu bị khóa");
+
+    await click(arrow(1, 0)); // bị khóa nhưng gọi thẳng: không được gửi
+    check(posts.length === 0, "kanban.js: không gửi yêu cầu khi không có cột đích");
+
+    await click(arrow(1, 1)); // STT 1: Chưa xử lý → Đang xử lý, thành công
+    check(posts.length === 1 && JSON.stringify(posts[0]) === JSON.stringify({ stt: 1, from: "Chưa xử lý", to: "Đang xử lý" }), "kanban.js: gửi đúng {stt, from, to}");
+    check(stts(1) === "1" && stts(0) === "", "kanban.js: thành công, thẻ ở cột Đang xử lý trong lúc chờ Sheets xác nhận");
+    check(notice().startsWith("notice ok") && notice().includes("gỡ 1 sự kiện"), `kanban.js: thông báo thành công nêu lịch (${notice()})`);
+
+    postMode = "409";
+    await click(arrow(2, 1)); // STT 2: Chờ ý kiến → Đã xong, nhưng nơi khác đã đổi
+    check(stts(2) === "2" && stts(3) === "", "kanban.js: 409 hoàn tác, thẻ về cột cũ");
+    check(notice().startsWith("notice err") && notice().includes("nơi khác"), `kanban.js: 409 có thông báo (${notice()})`);
+
+    postMode = "net";
+    await click(arrow(2, 1));
+    check(stts(2) === "2" && notice().includes("Không kết nối"), "kanban.js: mất mạng hoàn tác, có thông báo");
+    postMode = "502";
+    await click(arrow(2, 0));
+    check(stts(2) === "2" && notice().startsWith("notice err") && notice().includes("giữ nguyên"), "kanban.js: lỗi 502 hoàn tác");
+    check(posts.length === 4, `kanban.js: tổng 4 yêu cầu ghi (đúng ${posts.length})`);
+  } catch (e) { check(false, `kanban.js: ${e.stack ?? e.message}`); }
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }

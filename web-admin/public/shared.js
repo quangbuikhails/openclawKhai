@@ -60,3 +60,9 @@ export function taskDetails(r) {
   frag.append(body, link);
   return frag;
 }
+
+// Kanban (G4-03): bốn cột theo D16, Hủy ẩn. Hàm thuần để kiểm ngoại tuyến.
+export const KANBAN = ["Chưa xử lý", "Đang xử lý", "Chờ ý kiến", "Đã xong"];
+export const shiftStatus = (status, delta) => (KANBAN.includes(status) ? KANBAN[KANBAN.indexOf(status) + delta] ?? null : null);
+export const columnAt = (rects, x) => rects.findIndex((r) => x >= r.left && x <= r.right);
+export const daysUntil = (today, iso) => Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
