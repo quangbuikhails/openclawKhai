@@ -81,8 +81,12 @@ tr.overdue td { background: var(--red-bg); } tr.remind td { background: var(--am
 
 @media (max-width: 767px) {
   body { flex-direction: column; }
-  .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 8px; }
-  .sidebar nav, .sidebar .brand small { display: none; }
+  .sidebar { width: 100%; height: auto; position: static; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 8px; }
+  .sidebar .brand small { display: none; }
+  /* Điện thoại: liên kết giữa các trang nằm ở hàng thứ hai của thanh trên cùng */
+  .sidebar nav { order: 3; width: 100%; display: flex; gap: 6px; }
+  .sidebar .nav-title { display: none; }
+  .sidebar nav .nav-item { flex: 1; width: auto; text-align: center; padding: 8px 10px; }
   .logout { margin: 0; width: auto; padding: 6px 10px; }
   main { padding: 16px; }
   h1 { font-size: 22px; }

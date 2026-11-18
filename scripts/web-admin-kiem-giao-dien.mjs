@@ -39,6 +39,16 @@ for (const f of files.filter((x) => /\.(html|css)$/.test(x))) {
   check(ext.length === 0, `${f}: không nạp tài nguyên ngoài${ext.length ? ` (${ext.join("; ")})` : ""}`);
 }
 
+// ---- 2b) liên kết điều hướng giữa hai trang; điện thoại không được ẩn thanh điều hướng ----
+for (const [file, other, self] of [["index.html", "/lich", "/"], ["lich.html", "/", "/lich"]]) {
+  const nav = readFileSync(join(PUBLIC, file), "utf8").match(/<nav>[\s\S]*?<\/nav>/)?.[0] ?? "";
+  check(nav.includes(`href="${other}"`), `${file}: có liên kết sang ${other}`);
+  check(new RegExp(`class="nav-item active" href="${self}"`).test(nav), `${file}: mục đang mở được tô (active)`);
+}
+const phoneCss = readFileSync(join(PUBLIC, "style.css"), "utf8").match(/@media \(max-width: 767px\) \{[\s\S]*$/)?.[0] ?? "";
+check(!/\.sidebar nav[^{]*\{[^}]*display:\s*none/.test(phoneCss), "style.css: khổ điện thoại không ẩn thanh điều hướng");
+check(/\.sidebar nav\s*\{[^}]*display:\s*flex/.test(phoneCss), "style.css: khổ điện thoại hiện thanh điều hướng");
+
 // ---- 3) DOM giả ----
 class Node_ {
   constructor(tag = "#text") { this.tag = tag; this.children = []; this.attrs = {}; this.listeners = {}; this.className = ""; this._text = ""; this.hidden = false; this.href = ""; this.value = ""; this.style = {}; }
