@@ -122,7 +122,15 @@ Màn hình đồng ý OAuth ở chế độ Testing nên refresh token Drive h�
    ```
 
 2. Mở đường dẫn script in ra, đăng nhập tài khoản của chủ, cấp quyền `drive.file`. Trình duyệt sẽ báo không vào được `http://127.0.0.1:1/...` (bình thường); chép **cả URL** ở thanh địa chỉ, dán vào dòng nhắc của script. Không dán URL hay token vào chat.
-3. Script ghi `secrets/google/oauth-token.json` (quyền 600, kèm `obtained_at`), không in token. Server đọc tệp này mỗi lần cần, không cần tạo lại container.
+3. Script ghi `secrets/google/oauth-token.json` (quyền 600, kèm `obtained_at`), không in token. **Server chưa đọc lại tệp này sau khi đăng nhập lại** (23/11/2026: đăng nhập lại lúc 15:38 nhưng `drive_save_document` vẫn báo cần đăng nhập lại; `docker restart khai-mcp-google` lúc 15:52 thì lưu được; nguyên nhân suy luận, chưa kiểm chứng). Tạm thời, sau khi script ghi xong, lưu log rồi restart (không tạo lại container, không đổi cấu hình):
+
+   ```bash
+   docker logs -t khai-mcp-google > ~/khai-logs/mcp-google-$(date +%Y%m%d-%H%M).log 2>&1
+   docker restart khai-mcp-google
+   docker inspect -f '{{.State.StartedAt}}' khai-mcp-google   # ghi mốc giờ vào tasks.md
+   ```
+
+   Sửa dứt điểm: task Phát sinh "server Google đọc lại `oauth-token.json`" trong `docs/tasks.md`.
 4. Kiểm: `bash scripts/post-deploy-check.sh` dòng "đăng nhập Drive" phải ĐẠT, hạn mới sau 7 ngày.
 
 Xem lại Publish sang Production khi có tên miền đã xác minh (Google đòi trang chủ và chính sách riêng tư).

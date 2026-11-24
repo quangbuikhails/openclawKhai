@@ -107,15 +107,15 @@ Chủ gửi văn bản giao việc qua bot Zalo hoặc Telegram; trợ lý bóc 
 - **Cập nhật qua chat:** "xong văn bản 123/…", "dời hạn 123/… sang 25/10", "văn bản 123 chờ ý kiến lãnh đạo" → cập nhật biểu, lịch, Kanban sau khi chủ xác nhận.
 
 **Nghiệm thu**
-- [ ] Gửi ảnh chụp một văn bản thông thường qua bot Zalo và qua Telegram → nhận dòng đề xuất đúng trích yếu, số ký hiệu, cơ quan ban hành, thời hạn trong văn bản (đối chiếu tay).
-- [ ] Gửi một tệp PDF scan qua Telegram → bóc tách được; trường không chắc được đánh dấu "(cần kiểm tra)". Gửi một tệp Word → trợ lý báo chưa đọc được, đề nghị gửi PDF hoặc ảnh.
-- [ ] Gửi 2 ảnh của một văn bản rồi nhắn "xong" → một dòng đề xuất gộp đủ nội dung 2 trang.
-- [ ] Văn bản có thời hạn đã qua, có giờ → dòng đề xuất ghi "(đã qua hạn)", giờ nằm ở Ghi chú.
-- [ ] Từ chối ở bước xác nhận → biểu, Drive, Calendar không thay đổi.
-- [ ] Xác nhận → có dòng trên biểu, link mở được tệp trên Drive, hai sự kiện [Nhắc] và [Hạn] trên Calendar, Ngày nhắc việc đúng quy tắc (kể cả trường hợp rơi vào cuối tuần).
-- [ ] Gửi tệp thử có chữ "MẬT" ở vị trí dấu độ mật → trợ lý dừng, không lưu.
-- [ ] Gửi lại văn bản cùng Số ký hiệu → trợ lý hỏi cập nhật hay tạo mới.
-- [ ] Nhắn "xong văn bản…", "dời hạn…", "chờ ý kiến…" → nhắc lại, chờ xác nhận; biểu, lịch, log đúng.
+- [x] Gửi ảnh chụp một văn bản thông thường qua bot Zalo và qua Telegram → nhận dòng đề xuất đúng trích yếu, số ký hiệu, cơ quan ban hành, thời hạn trong văn bản (đối chiếu tay).
+- [x] Gửi một tệp PDF scan qua Telegram → bóc tách được; trường không chắc được đánh dấu "(cần kiểm tra)". Gửi một tệp Word → trợ lý báo chưa đọc được, đề nghị gửi PDF hoặc ảnh.
+- [x] Gửi 2 ảnh của một văn bản rồi nhắn "xong" → một dòng đề xuất gộp đủ nội dung 2 trang.
+- [x] Văn bản có thời hạn đã qua, có giờ → dòng đề xuất ghi "(đã qua hạn)", giờ nằm ở Ghi chú.
+- [x] Từ chối ở bước xác nhận → biểu, Drive, Calendar không thay đổi.
+- [x] Xác nhận → có dòng trên biểu, link mở được tệp trên Drive, hai sự kiện [Nhắc] và [Hạn] trên Calendar, Ngày nhắc việc đúng quy tắc (kể cả trường hợp rơi vào cuối tuần).
+- [x] Gửi tệp thử có chữ "MẬT" ở vị trí dấu độ mật → trợ lý dừng, không lưu.
+- [x] Gửi lại văn bản cùng Số ký hiệu → trợ lý hỏi cập nhật hay tạo mới.
+- [x] Nhắn "xong văn bản…", "dời hạn…", "chờ ý kiến…" → nhắc lại, chờ xác nhận; biểu, lịch, log đúng.
 
 ### Gói 3 — Trả lời thay qua Zalo cá nhân
 
