@@ -159,6 +159,7 @@ Quy ước:
 
 | Ngày | Nhãn git | Phiên bản OpenClaw | Thay đổi | Kiểm tra 7.3 |
 |---|---|---|---|---|
+| 25/11/2026 | (chưa gắn nhãn) | 2026.10.3 | G4-03: Kanban (`/kanban`), `khai-mcp-google` 0.7.0 với `POST /web/task-status` (`WEB_TOKEN`, `WEB_ORIGIN`), mạng `khai-pbs-write`, tạo lại `khai-mcp-google` 14:06:17 và `khai-web-admin` 14:06:32 | Đạt (25/11/2026) |
 | 24/11/2026 | `goi2c-v1` | 2026.10.3 | Nghiệm thu Gói 2C (G2C-05): tiếp nhận văn bản giao việc qua Zalo, Telegram; lưu Drive; cập nhật qua chat; chạy thử văn bản thật 17 đến 23/11/2026 | Đạt (23/11/2026) |
 | 16/11/2026 | (chưa gắn nhãn) | 2026.10.3 | G2C-04: `task_update_doc`, `task_list` `prefix_fallback`, skill `cong-viec` quy tắc 11, `tiep-nhan-van-ban` mục 5A, D45, D46 | Đạt (16/11/2026) |
 | 15/11/2026 | (chưa gắn nhãn) | 2026.10.3 | G2C-03: Drive (`drive_save_document`, `drive_trash`), `task_add` kèm link, định dạng ngày khi ghi, D43, D44 | Đạt (15/11/2026) |
