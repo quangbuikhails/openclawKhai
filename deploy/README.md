@@ -351,3 +351,33 @@ Kỳ vọng: `enabled, configured, running, connected`.
 Sao lưu trước: `cp -p ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.truoc-go-telegram`.
 
 Tin gửi lúc kênh tắt có được xử lý lại sau khi bật hay không: chưa kiểm chứng.
+
+## Sao lưu repo (G1-08, D50)
+
+Repo hiện chỉ nằm trên ổ WSL. Sao lưu bằng remote GitHub **private**; anh Khải tự làm các bước dưới, agent không push (AGENTS.md).
+
+**Điều kiện trước lần push đầu:** đã rà bí mật toàn bộ lịch sử (`git log -p --all`) và ghi kết quả ở Ghi nhận G1-08 trong `docs/tasks.md`: 0 giá trị thật. Chưa rà hoặc có commit mới chưa rà thì không push.
+
+1. Trên GitHub tạo repo **Private**, tên tùy chọn; không tick tạo README, `.gitignore`, license (để repo rỗng).
+2. Tạo khóa SSH trong WSL (không đặt mật khẩu trống nếu máy dùng chung; không chép khóa riêng ra đâu):
+
+   ```bash
+   ssh-keygen -t ed25519 -C "khai-phien-ban-so" -f ~/.ssh/id_ed25519_github
+   cat ~/.ssh/id_ed25519_github.pub   # chỉ chép khóa công khai (.pub)
+   ```
+
+3. GitHub → Settings → SSH and GPG keys → New SSH key, dán khóa công khai. Chỉ định khóa cho GitHub: thêm vào `~/.ssh/config` các dòng `Host github.com`, `IdentityFile ~/.ssh/id_ed25519_github`, `IdentitiesOnly yes`; rồi `chmod 700 ~/.ssh && chmod 600 ~/.ssh/config ~/.ssh/id_ed25519_github`. Kiểm: `ssh -T git@github.com` phải chào đúng tên tài khoản.
+4. Đứng trong thư mục gốc repo:
+
+   ```bash
+   git remote add origin git@github.com:<tài-khoản>/<tên-repo>.git
+   git push -u origin main --tags
+   ```
+
+5. Kiểm: `git remote -v` có `origin`; `git log origin/main..main` rỗng; `git ls-remote --tags origin` có `goi2-v1`, `goi2c-v1`; trang repo hiện nhãn Private.
+
+**Quy ước:** anh Khải tự `git push` (và `git push --tags` khi có nhãn mới) sau mỗi lần commit. Tài liệu vận hành (cổng, tên máy tailnet) và định danh riêng (ID Zalo, Telegram của chủ ở `openclaw-workspace/AGENTS.md`) chấp nhận nằm trong repo private (D50). `git bundle` định kỳ không bắt buộc.
+
+**Điều kiện đổi chế độ:** nếu repo chuyển public hoặc mở rộng quyền truy cập (thêm người, bật fork, deploy key cho dịch vụ khác) thì **phải viết lại lịch sử để gỡ hai ID trên trước khi đổi chế độ** (ví dụ `git filter-repo`, cần hỏi anh Khải và chốt riêng, vì làm thay đổi mọi mã băm và nhãn). Không dùng `git push --force` cho việc này khi chưa hỏi.
+
+Không ghi khóa riêng, mật khẩu hay token vào repo; khóa riêng chỉ nằm trong `~/.ssh/`.
