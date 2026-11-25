@@ -30,6 +30,16 @@ tệp gốc trên Google Drive, lịch trên Google Calendar; nhắc việc ch�
 4. Xong task: chạy đúng bước "Kiểm chứng" ghi trong task, dán lệnh và đầu ra thực tế. Chưa chạy thì không báo "đã xong".
 5. Task có sửa `openclaw-workspace/` (SOUL, AGENTS của trợ lý, skill): trước khi báo xong phải chạy phần tương ứng của bộ kiểm thử hồi quy (SPEC mục 7) và dán kết quả.
 6. Đánh dấu `[x]` trong tasks.md, thêm một dòng `Ghi nhận:` dưới task (ngày; phiên bản OpenClaw nếu liên quan; lỗi đáng nhớ), đề xuất commit message. Không tự push, không tự sửa lịch sử git.
+7. Push (D50): sau MỖI lần commit, câu trả lời phải kết thúc bằng đúng khối nhắc sau, không được bỏ qua:
+
+   ```
+   NHẮC PUSH: anh chạy lệnh
+   git push
+   rồi dán dòng kết quả (dạng ...  main -> main) để tôi xác nhận.
+   ```
+
+   Chỉ coi một task là hoàn tất sau khi anh Khải đã xác nhận push xong (dán dòng kết quả). Agent vẫn không tự push.
+8. Đầu phiên: chạy `git status -sb`; nếu local đi trước `origin/main` (có commit chưa push) thì nhắc anh Khải push ngay, trước khi làm việc khác.
 
 ## Chống rác
 
