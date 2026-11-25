@@ -1,6 +1,7 @@
 # Compose override cho server MCP Google (G2-01B, PLAN.md D21). Ghép với ~/apps/openclaw/docker-compose.yml.
 # Dùng đường dẫn tuyệt đối theo $HOME vì đường dẫn tương đối tính từ thư mục của tệp -f đầu tiên.
-# Dịch vụ cùng dự án khai-pbs nên tự vào mạng khai-pbs_default; KHÔNG có `ports:` (không publish ra host).
+# Dịch vụ cùng dự án khai-pbs nên vào mạng khai-pbs_default; KHÔNG có `ports:` (không publish ra host).
+# Từ G4-03 thêm mạng khai-pbs-write (internal, chỉ khai-mcp-google và khai-web-admin) để web-admin gọi POST /web/task-status (D47); web-admin không vào khai-pbs_default.
 services:
   khai-mcp-google:
     image: ${OPENCLAW_IMAGE:?đặt OPENCLAW_IMAGE trong ~/apps/openclaw/.env}
@@ -17,6 +18,7 @@ services:
       - ${HOME}/projects/khai-phien-ban-so/secrets/google:/run/secrets:ro
       # Tệp gốc văn bản đến do Gateway lưu (G2C-03, C28): chỉ đọc; server chỉ mở tệp theo mã đã kiểm.
       - ${HOME}/.openclaw/workspace/media/inbound:/inbox:ro
+    networks: [default, write]
     read_only: true
     tmpfs:
       - /tmp
@@ -30,3 +32,8 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+networks:
+  write:
+    name: khai-pbs-write
+    internal: true

@@ -60,3 +60,18 @@ export function taskDetails(r) {
   frag.append(body, link);
   return frag;
 }
+
+// Kanban (G4-03): bốn cột theo D16, Hủy ẩn. Hàm thuần để kiểm ngoại tuyến.
+export const KANBAN = ["Chưa xử lý", "Đang xử lý", "Chờ ý kiến", "Đã xong"];
+export const shiftStatus = (status, delta) => (KANBAN.includes(status) ? KANBAN[KANBAN.indexOf(status) + delta] ?? null : null);
+// Cột đích của thẻ đang kéo: lấy từ chồng phần tử dưới con trỏ (document.elementsFromPoint), bỏ qua chính thẻ đang kéo.
+// Không theo toạ độ x vì bảng xếp 4 cột, 2x2 hoặc 1 cột tùy khổ màn hình. Trả -1 khi con trỏ không ở trong cột nào.
+export const columnAt = (stack, cols, dragged) => {
+  for (const node of stack) {
+    if (node === dragged || dragged?.contains?.(node)) continue;
+    const col = node.closest?.(".kcol");
+    if (col) return cols.indexOf(col);
+  }
+  return -1;
+};
+export const daysUntil = (today, iso) => Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);

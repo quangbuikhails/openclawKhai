@@ -1,4 +1,4 @@
-// Đọc Google Sheets và Calendar bằng service account CHỈ ĐỌC (PLAN.md D47). Không có đường ghi.
+// Đọc Google Sheets và Calendar bằng service account CHỈ ĐỌC (PLAN.md D47). Không có đường ghi; mọi lần ghi đi qua khai-mcp-google (server.mjs).
 import { createSign } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -131,7 +131,7 @@ function makeCache(loader) {
   let snap = null; // {at, data}
   let inflight = null;
   let blockedUntil = 0;
-  return async () => {
+  const get = async () => {
     const now = Date.now();
     if (snap && now - snap.at < CACHE_MS) return { ...snap, stale: false };
     if (snap && now < blockedUntil) return { ...snap, stale: true };
@@ -153,9 +153,33 @@ function makeCache(loader) {
     const fresh = snap && snap.at >= now;
     return { ...snap, stale: !fresh };
   };
+  // Sau khi ghi qua khai-mcp-google: lần đọc kế tiếp phải hỏi lại Google, không dùng bản đệm.
+  get.invalidate = () => {
+    snap = null;
+    blockedUntil = 0;
+  };
+  return get;
 }
 
 export const getTasks = makeCache(loadTasks);
+
+// ---- Nhật ký (D49): dòng log của trợ lý và web (sửa tay không có log). Giờ trong log là serial giờ Việt Nam. ----
+const LOG_CHANNELS = new Set(["ui", "zalo", "telegram", "web"]);
+const serialToLocal = (n) => new Date(Math.round((n - 25569) * DAY_MS)).toISOString().slice(0, 16);
+async function loadLog() {
+  const range = encodeURIComponent("log!A2:E5000");
+  const data = await googleGet(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`);
+  const entries = (data.values ?? [])
+    .filter((r) => typeof r[0] === "number" && LOG_CHANNELS.has(r[1]))
+    .map((r) => ({ time: serialToLocal(r[0]), channel: r[1], action: String(r[2] ?? ""), stt: typeof r[3] === "number" ? r[3] : null, summary: String(r[4] ?? "").slice(0, 120) }));
+  return { entries: entries.slice(-30).reverse() };
+}
+export const getLog = makeCache(loadLog);
+// Sau khi ghi qua khai-mcp-google: bỏ đệm biểu và log để lần đọc kế tiếp thấy thay đổi.
+export const invalidateAfterWrite = () => {
+  getTasks.invalidate();
+  getLog.invalidate();
+};
 
 // ---- Lịch: chỉ tiêu đề và giờ (D25, D47) ----
 const EVENT_FIELDS = "items(id,summary,status,start,end,extendedProperties/private(owner,kind))";

@@ -1,6 +1,6 @@
-# Web app Biểu theo dõi, chỉ đọc (G4-02, PLAN.md D47). Tệp đứng một mình, KHÔNG ghép với docker-compose.yml của OpenClaw.
+# Web app Biểu theo dõi, Lịch, Kanban (G4-02, G4-03, PLAN.md D47). Tệp đứng một mình, KHÔNG ghép với docker-compose.yml của OpenClaw.
 # Bật: docker compose -p khai-pbs-web --env-file ~/apps/openclaw/.env -f deploy/docker-compose.web-admin.yml up -d --no-deps web-admin
-# Project compose riêng khai-pbs-web (không có orphan, down hay --remove-orphans không chạm openclaw-gateway, khai-mcp-google). Mạng riêng khai-pbs-web: không có đường tới khai-mcp-google. Không có token ghi, không mount secrets/mcp-google.env.
+# Project compose riêng khai-pbs-web (không có orphan, down hay --remove-orphans không chạm openclaw-gateway, khai-mcp-google). Đọc Google bằng khóa chỉ đọc. Đường ghi duy nhất: mạng khai-pbs-write (internal, do compose của mcp-google tạo, phải có trước) tới khai-mcp-google:3000/web/task-status bằng WEB_TOKEN (trong secrets/web-admin.env cùng WEB_ORIGIN); không vào khai-pbs_default, không mount secrets/mcp-google.env, không có MCP_GOOGLE_TOKEN, BRIEF_TOKEN.
 services:
   web-admin:
     image: ${OPENCLAW_IMAGE:?đặt OPENCLAW_IMAGE trong ~/apps/openclaw/.env}
@@ -12,13 +12,14 @@ services:
       - ${HOME}/projects/khai-phien-ban-so/secrets/web-admin.env
     environment:
       TZ: Asia/Ho_Chi_Minh
+      MCP_WRITE_URL: http://khai-mcp-google:3000
     volumes:
       - ${HOME}/projects/khai-phien-ban-so/web-admin:/app/web-admin:ro
       # Gắn thư mục (không gắn tệp đơn lẻ), chỉ chứa khóa SA chỉ đọc.
       - ${HOME}/projects/khai-phien-ban-so/secrets/google-ro:/run/secrets:ro
     ports:
       - "127.0.0.1:28801:3000"
-    networks: [web]
+    networks: [web, write]
     read_only: true
     tmpfs:
       - /tmp
@@ -36,3 +37,6 @@ services:
 networks:
   web:
     name: khai-pbs-web
+  write:
+    name: khai-pbs-write
+    external: true

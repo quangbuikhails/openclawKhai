@@ -2,6 +2,7 @@
 // Chạy trong container riêng từ image OpenClaw (mount vào /app/mcp-google để dùng /app/node_modules).
 // Chỉ thao tác đúng một bảng tính và một lịch; ID lấy từ biến môi trường, không công cụ nào nhận ID từ mô hình.
 // BRIEF_TOKEN (tùy chọn, >= 32 ký tự): bật GET /brief/morning, /brief/afternoon và POST /sync/all[?force=1&quiet=1] (G2-06b).
+// WEB_TOKEN + WEB_ORIGIN (tùy chọn): bật POST /web/task-status cho web-admin (G4-03, D47); chỉ đổi Trạng thái giữa bốn cột Kanban, có so trạng thái cũ, channel "web". Thiếu một trong hai thì tắt.
 // SHEET_MODE, CAL_MODE: "test" (mặc định) hoặc "prod"; phải khớp tên bảng tính, lịch (test: bắt đầu "[TEST]"), sai thì thoát mã 1.
 import { createServer } from "node:http";
 import { createSign, timingSafeEqual } from "node:crypto";
@@ -63,6 +64,11 @@ const MCP_TOKEN = requireEnv("MCP_GOOGLE_TOKEN", /^[\x21-\x7e]{32,}$/);
 // Token riêng cho /brief/* và /sync/* (chỉ đọc bản tin, chạy đồng bộ); thiếu, dưới 32 ký tự hoặc trùng MCP_GOOGLE_TOKEN thì tắt hai nhóm đường này.
 const briefCandidate = process.env.BRIEF_TOKEN ?? "";
 const BRIEF_TOKEN = /^[\x21-\x7e]{32,}$/.test(briefCandidate) && briefCandidate !== MCP_TOKEN ? briefCandidate : "";
+// Token riêng cho /web/* (web-admin đổi trạng thái); phải khác MCP_GOOGLE_TOKEN, BRIEF_TOKEN, và có WEB_ORIGIN (giá trị Origin web-admin gửi kèm).
+const webCandidate = process.env.WEB_TOKEN ?? "";
+const WEB_TOKEN = /^[\x21-\x7e]{32,}$/.test(webCandidate) && webCandidate !== MCP_TOKEN && webCandidate !== BRIEF_TOKEN ? webCandidate : "";
+const WEB_ORIGIN = /^https?:\/\/[^/\s]+$/.test(process.env.WEB_ORIGIN ?? "") ? process.env.WEB_ORIGIN : "";
+const WEB_ENABLED = Boolean(WEB_TOKEN && WEB_ORIGIN);
 const SPREADSHEET_ID = requireEnv("SPREADSHEET_ID", /^[A-Za-z0-9_-]{20,}$/);
 const CALENDAR_ID = requireEnv("CALENDAR_ID", /^[A-Za-z0-9_.@-]{5,}$/);
 const SHEET_MODE = modeEnv("SHEET_MODE");
@@ -212,9 +218,13 @@ async function locate(sttValue) {
 }
 
 // Kiểm tra lại ngay trước khi ghi: dòng đó vẫn là STT đó (anh có thể vừa sắp xếp, chèn dòng).
-async function stillSameRow(rec) {
-  const v = await readRange(`${SHEET_TAB}!A${rec.row}`);
-  return Number(v[0]?.[0]) === rec.stt;
+// withStatus (đường web, có expected): đọc A:J và so cả Trạng thái với giá trị vừa đọc, để thu hẹp khe với sửa tay.
+async function stillSameRow(rec, withStatus = false) {
+  const v = await readRange(withStatus ? `${SHEET_TAB}!A${rec.row}:J${rec.row}` : `${SHEET_TAB}!A${rec.row}`);
+  if (Number(v[0]?.[0]) !== rec.stt) return false;
+  if (!withStatus) return true;
+  const cur = v[0]?.[COLS.indexOf("status")];
+  return (cur === undefined || cur === null || cur === "" ? null : String(cur)) === (rec.status ?? null);
 }
 
 // Chế độ test: chỉ động vào việc có "Nội dung cần xử lý" bắt đầu [TEST].
@@ -423,6 +433,23 @@ async function remindThenSync(row, rec) {
   return { remind, synced: await syncAfterWrite({ ...rec, remind_date: remind.remind_date }) };
 }
 
+// Đổi Trạng thái một việc (dùng chung cho tool task_set_status và /web/task-status). Gọi trong serialized().
+// expected (chỉ web): trạng thái cũ mà người dùng thấy; lệch thì không ghi (compare-and-set).
+// Trả { data } khi xong, hoặc { kind, error, current? }; locate ném lỗi khi không thấy hoặc STT trùng.
+async function setStatus({ stt: sttValue, status, channel: ch, expected }) {
+  const rec = await locate(sttValue);
+  const denied = testGuard(rec.action_required);
+  if (denied) return { kind: "denied", error: denied };
+  if (expected !== undefined && (rec.status ?? null) !== expected) {
+    return { kind: "conflict", error: "Trạng thái đã bị đổi ở nơi khác", current: rec.status ?? null };
+  }
+  if (rec.status === status) return { data: { stt: sttValue, unchanged: true, ...(await syncAfterWrite(rec)) } };
+  if (!(await stillSameRow(rec, expected !== undefined))) return { kind: "conflict", error: "Biểu vừa thay đổi, thử lại" };
+  await writeCell(COL_LETTER.status, rec.row, status);
+  const logged = await writeLog(ch, status === "Hủy" ? "huy" : "doi_trang_thai", sttValue, `${rec.status ?? "(trống)"} → ${status}`);
+  return { data: { stt: sttValue, status, ...logged, ...(await syncAfterWrite({ ...rec, status })) } };
+}
+
 // Đối chiếu cả biểu với lịch. Trả { stopped } khi dừng (chưa ghi gì, hoặc dừng giữa chừng), ngược lại trả số liệu.
 async function syncAll(force) {
   let table;
@@ -559,7 +586,7 @@ async function startupChecks() {
 }
 
 function buildServer() {
-  const server = new McpServer({ name: "khai-mcp-google", version: "0.6.0" });
+  const server = new McpServer({ name: "khai-mcp-google", version: "0.7.0" });
 
   // Mỗi công cụ ghi log tên và kết quả, không ghi nội dung dữ liệu.
   const tool = (name, description, inputSchema, handler) =>
@@ -690,14 +717,8 @@ function buildServer() {
     { stt, status: z.enum(STATUSES), channel },
     ({ stt: sttValue, status, channel: ch }) =>
       serialized(async () => {
-        const rec = await locate(sttValue);
-        const denied = testGuard(rec.action_required);
-        if (denied) return fail(denied);
-        if (rec.status === status) return ok({ stt: sttValue, unchanged: true, ...(await syncAfterWrite(rec)) });
-        if (!(await stillSameRow(rec))) return fail("Biểu vừa thay đổi, thử lại");
-        await writeCell(COL_LETTER.status, rec.row, status);
-        const logged = await writeLog(ch, status === "Hủy" ? "huy" : "doi_trang_thai", sttValue, `${rec.status ?? "(trống)"} → ${status}`);
-        return ok({ stt: sttValue, status, ...logged, ...(await syncAfterWrite({ ...rec, status })) });
+        const r = await setStatus({ stt: sttValue, status, channel: ch });
+        return r.error ? fail(r.error) : ok(r.data);
       }),
   );
 
@@ -997,9 +1018,47 @@ async function handleBriefRoute(req, res, path, query) {
   return send(res, 200, text);
 }
 
+// /web/task-status: token riêng WEB_TOKEN + Origin đúng WEB_ORIGIN (thiếu hoặc sai: 403). Chỉ bốn cột Kanban, không Hủy.
+const KANBAN_STATUSES = STATUSES.slice(0, 4);
+const webBody = z.object({ stt, from: z.enum(KANBAN_STATUSES), to: z.enum(KANBAN_STATUSES) }).strict().refine((b) => b.from !== b.to);
+const sendJson = (res, status, obj) => res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" }).end(JSON.stringify(obj));
+
+async function handleWebRoute(req, res, path) {
+  if (!WEB_ENABLED || path !== "/web/task-status") return send(res, 404, "not found");
+  if (!tokenMatches(req.headers.authorization, WEB_TOKEN)) return send(res, 401, "unauthorized");
+  if (req.method !== "POST") return send(res, 405, "method not allowed");
+  if (req.headers.origin !== WEB_ORIGIN) return webResult(res, "tu_choi", 403, { error: "origin" });
+  let body;
+  try {
+    body = webBody.parse(JSON.parse(await readBody(req)));
+  } catch {
+    return webResult(res, "tu_choi", 400, { error: "Dữ liệu không hợp lệ" });
+  }
+  try {
+    const r = await serialized(() => setStatus({ stt: body.stt, status: body.to, channel: "web", expected: body.from }));
+    if (r.kind === "conflict") return webResult(res, "xung_dot", 409, { error: r.error, current: r.current ?? null });
+    if (r.error) return webResult(res, "tu_choi", 403, { error: r.error });
+    return webResult(res, "ok", 200, { ok: true, ...r.data });
+  } catch (err) {
+    if (/^Không thấy việc/.test(err.message)) return webResult(res, "tu_choi", 404, { error: "Không thấy việc" });
+    return webResult(res, "loi", 502, { error: "Chưa ghi được, thử lại sau" });
+  }
+}
+
+function webResult(res, label, status, obj) {
+  console.log(`route=/web/task-status ket_qua=${label}`);
+  return sendJson(res, status, obj);
+}
+
 createServer(async (req, res) => {
   const [path, query = ""] = (req.url ?? "").split("?");
   if (path === "/healthz" && req.method === "GET") return send(res, 200, "ok");
+  if (path.startsWith("/web/")) {
+    return handleWebRoute(req, res, path).catch(() => {
+      console.log(`route=${path} ket_qua=loi`);
+      if (!res.headersSent) send(res, 500, "error");
+    });
+  }
   if (path.startsWith("/brief/") || path.startsWith("/sync/")) {
     return handleBriefRoute(req, res, path, query).catch(() => {
       console.log(`route=${path} ket_qua=loi`);
@@ -1022,4 +1081,4 @@ createServer(async (req, res) => {
   } catch {
     if (!res.headersSent) send(res, 400, "bad request");
   }
-}).listen(PORT, "0.0.0.0", () => console.log(`khai-mcp-google lắng nghe cổng ${PORT} (biểu: ${SHEET_MODE}, lịch: ${CAL_MODE}, brief: ${BRIEF_TOKEN ? "bật" : "tắt"}, drive: ${driveEnabled ? "bật" : "tắt"})`));
+}).listen(PORT, "0.0.0.0", () => console.log(`khai-mcp-google lắng nghe cổng ${PORT} (biểu: ${SHEET_MODE}, lịch: ${CAL_MODE}, brief: ${BRIEF_TOKEN ? "bật" : "tắt"}, web: ${WEB_ENABLED ? "bật" : "tắt"}, drive: ${driveEnabled ? "bật" : "tắt"})`));
