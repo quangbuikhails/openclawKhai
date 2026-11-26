@@ -171,7 +171,7 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 
 Kho tài liệu và ghi nhớ cá nhân của chủ, nhiều mảng; trợ lý tra cứu và trả lời kèm dẫn nguồn (đã chốt D51).
 
-- **Kho:** thư mục Markdown tại `~/kho-tri-thuc` (ngoài repo, ngoài workspace OpenClaw), git riêng; mở, sửa bằng Obsidian. Ba tầng: `nguon/` (văn bản gốc hoặc trỏ tệp Drive), `wiki/` (trang tri thức chưng cất), `ghi-nho/` (kinh nghiệm, quy trình, ghi chú cá nhân của chủ). Cấu trúc mở đa mảng: thêm mảng mới chỉ là thêm thư mục, không sửa code; danh sách mảng ban đầu và cấu trúc thư mục chốt ở C36.
+- **Kho:** thư mục Markdown tại `D:\KhoTriThuc` (trong WSL: `/mnt/d/KhoTriThuc`; ngoài repo, ngoài workspace OpenClaw), git riêng; mở, sửa bằng Obsidian. Ba tầng: `nguon/` (văn bản gốc hoặc trỏ tệp Drive), `wiki/` (trang tri thức chưng cất), `ghi-nho/` (kinh nghiệm, quy trình, ghi chú cá nhân của chủ). Cấu trúc mở đa mảng: thêm mảng mới chỉ là thêm thư mục, không sửa code; danh sách mảng ban đầu và cấu trúc thư mục đã chốt D52.
 - **Mảng thí điểm:** Đầu tư công (nghị quyết và phụ lục dự án) và Kết luận, kiến nghị giám sát của Ban KTNS; mảng khác nạp sau khi nghiệm thu đạt.
 - **Số liệu dạng bảng** (phân bổ, điều chỉnh vốn…): đưa vào Google Sheets theo hạ tầng sẵn có; trang wiki trỏ tới bảng.
 - **Phần đầu mỗi trang:** mảng, số ký hiệu, ngày ban hành, tình trạng hiệu lực (chủ ghi), nguồn (link Drive hoặc tệp trong `nguon/`).

@@ -186,9 +186,10 @@ _(Chi tiết "Làm" và "Kiểm chứng" của từng task Gói 2 được bổ 
 ## Gói 5 — Kho tri thức (bộ não thứ hai)
 
 > Theo D51. G5-01, G5-02 là phần chuẩn bị, không đụng hệ thống đang chạy, làm được ngay; từ G5-03 (nối bot) làm sau khi Gói 4 nghiệm thu (goi4-v1).
-> Trước G5-01: anh Khải chuẩn bị 2–3 văn bản mẫu đầu tư công, 1–2 kết luận giám sát (chỉ văn bản thông thường) và danh sách mảng cho C36.
+> Trước G5-01: anh Khải chuẩn bị 2–3 văn bản mẫu đầu tư công, 1–2 kết luận giám sát (chỉ văn bản thông thường) và danh sách mảng (đã chốt D52).
 
-- [ ] **G5-01 Tạo kho** _(anh Khải cùng agent)_ — tạo `~/kho-tri-thuc` (git riêng), cấu trúc thư mục theo danh sách mảng (chốt C36), mẫu phần đầu tệp, README quy ước; thử mở bằng Obsidian qua `\\wsl.localhost`, chậm thì chuyển ổ Windows và ghi vào PLAN.
+- [x] **G5-01 Tạo kho** _(anh Khải cùng agent)_ — tạo kho tại `D:\KhoTriThuc` (git riêng), cấu trúc thư mục theo danh sách mảng (đã chốt D52), mẫu phần đầu tệp, README quy ước; Obsidian qua `\\wsl.localhost` và ổ Z: lỗi EISDIR nên đã chuyển sang ổ Windows và ghi vào PLAN.
+  Ghi nhận: 26/11/2026; Obsidian lỗi EISDIR với `\\wsl.localhost` và ổ mạng Z:, chuyển kho sang `D:\KhoTriThuc`, Obsidian mở và gõ có dấu ổn; kho 2 commit (`301199c`, `b16b66e`), 6 mảng (D52). Lưu ý: ổ Windows cần `core.filemode=false`; Docker mount kho qua `/mnt/d/…` (chậm hơn, chấp nhận vì chỉ đọc).
 - [ ] **G5-02 Nạp thử thí điểm** — chuyển văn bản mẫu hai mảng thành `nguon/`, `wiki/` và bảng số liệu trên Sheets; mỗi lần nạp một commit; anh Khải duyệt hình hài kho rồi mới nạp tiếp.
 - [ ] **G5-03 Server `khai-mcp-kho` (chỉ đọc)** — container riêng theo khuôn D21, mount kho chỉ đọc, công cụ tìm và đọc trang; đăng ký MCP, toolFilter; trình kế hoạch trước khi làm.
 - [ ] **G5-04 Skill `tra-cuu-kho` và AGENTS.md của trợ lý** — quy tắc dẫn nguồn, "không có trong kho", phạm vi dữ liệu, hiệu lực; hồi quy nhóm KT và 7.3.
