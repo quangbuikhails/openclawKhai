@@ -183,6 +183,21 @@ _(Chi tiết "Làm" và "Kiểm chứng" của từng task Gói 2 được bổ 
 - [ ] **G2B-04 Skill tạo tệp Word** — theo C13, C15; kiểm chứng CB3.
 - [ ] **G2B-05 Chạy lại toàn bộ bộ kiểm thử hồi quy, nghiệm thu Gói 2B, triển khai với nhãn `goi2b-v1`**
 
+## Gói 5 — Kho tri thức (bộ não thứ hai)
+
+> Theo D51. G5-01, G5-02 là phần chuẩn bị, không đụng hệ thống đang chạy, làm được ngay; từ G5-03 (nối bot) làm sau khi Gói 4 nghiệm thu (goi4-v1).
+> Trước G5-01: anh Khải chuẩn bị 2–3 văn bản mẫu đầu tư công, 1–2 kết luận giám sát (chỉ văn bản thông thường) và danh sách mảng cho C36.
+
+- [ ] **G5-01 Tạo kho** _(anh Khải cùng agent)_ — tạo `~/kho-tri-thuc` (git riêng), cấu trúc thư mục theo danh sách mảng (chốt C36), mẫu phần đầu tệp, README quy ước; thử mở bằng Obsidian qua `\\wsl.localhost`, chậm thì chuyển ổ Windows và ghi vào PLAN.
+- [ ] **G5-02 Nạp thử thí điểm** — chuyển văn bản mẫu hai mảng thành `nguon/`, `wiki/` và bảng số liệu trên Sheets; mỗi lần nạp một commit; anh Khải duyệt hình hài kho rồi mới nạp tiếp.
+- [ ] **G5-03 Server `khai-mcp-kho` (chỉ đọc)** — container riêng theo khuôn D21, mount kho chỉ đọc, công cụ tìm và đọc trang; đăng ký MCP, toolFilter; trình kế hoạch trước khi làm.
+- [ ] **G5-04 Skill `tra-cuu-kho` và AGENTS.md của trợ lý** — quy tắc dẫn nguồn, "không có trong kho", phạm vi dữ liệu, hiệu lực; hồi quy nhóm KT và 7.3.
+- [ ] **G5-05 Soát kho** — script kiểm: trang mồ côi, liên kết gãy, trang quá cũ, lộ bí mật; chạy tay hoặc job `--command`.
+- [ ] **G5-06 Sao lưu kho** — script zip lên Drive dự án định kỳ; khôi phục thử một lần.
+- [ ] **G5-07 Nghiệm thu Gói 5** — đủ 20–30 văn bản hai mảng, bộ 10 câu hỏi thật, đạt ≥ 9/10 theo D51; nhãn `goi5-v1`; chốt C37 sau nghiệm thu.
+
+_(Chi tiết "Làm" và "Kiểm chứng" từng task bổ sung khi bắt đầu G5-01.)_
+
 ## Gói 3
 
 _(Lập danh sách task khi bắt đầu gói.)_
