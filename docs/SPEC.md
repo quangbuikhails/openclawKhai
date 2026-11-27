@@ -162,10 +162,10 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 - Công nghệ, xác thực: PLAN.md D47; truy cập từ điện thoại: D48; phạm vi thiết kế: D49.
 
 **Nghiệm thu** (bổ sung chi tiết khi bắt đầu gói)
-- [ ] Kéo một thẻ [TEST] sang "Đang xử lý" → Trạng thái trên Sheets đổi trong vòng vài giây, có dòng `log`.
-- [ ] Nhắn bot "xong văn bản [TEST]…" → thẻ sang cột Đã xong, sự kiện trên lịch được gỡ hoặc cập nhật.
-- [ ] Sửa tay hạn trên Sheets → lịch web app và Ngày nhắc việc đổi theo.
-- [ ] Mở web app trên điện thoại qua cách đã chốt ở D48; từ mạng ngoài không có quyền thì không vào được.
+- [x] Kéo một thẻ [TEST] sang "Đang xử lý" → Trạng thái trên Sheets đổi trong vòng vài giây, có dòng `log`.
+- [x] Nhắn bot "xong văn bản [TEST]…" → thẻ sang cột Đã xong, sự kiện trên lịch được gỡ hoặc cập nhật.
+- [x] Sửa tay hạn trên Sheets → lịch web app và Ngày nhắc việc đổi theo.
+- [x] Mở web app trên điện thoại qua cách đã chốt ở D48; từ mạng ngoài không có quyền thì không vào được.
 
 ### Gói 5 — Kho tri thức (bộ não thứ hai)
 
