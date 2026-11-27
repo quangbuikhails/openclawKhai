@@ -1,0 +1,42 @@
+# Server MCP chỉ đọc cho kho tri thức (G5-03, PLAN.md D21, D51–D56). Tệp đứng một mình, KHÔNG ghép với docker-compose.yml của OpenClaw.
+# Bật: docker compose -p khai-pbs-kho --env-file ~/apps/openclaw/.env -f deploy/docker-compose.mcp-kho.yml up -d khai-mcp-kho
+# Project compose riêng khai-pbs-kho: không có orphan; down hay --remove-orphans không chạm openclaw-gateway, khai-mcp-google, khai-web-admin.
+# Vào mạng khai-pbs_default (external, của Gateway) để Gateway gọi http://khai-mcp-kho:3000/mcp; KHÔNG có `ports:`.
+# Kho mount chỉ đọc, chỉ ba thư mục (không .git/, .obsidian/, không tệp đơn). Khóa SA chỉ đọc riêng (D56) ở secrets/google-kho.
+services:
+  khai-mcp-kho:
+    image: ${OPENCLAW_IMAGE:?đặt OPENCLAW_IMAGE trong ~/apps/openclaw/.env}
+    container_name: khai-mcp-kho
+    entrypoint: ["node", "/app/mcp-kho/server.mjs"]
+    user: "1000:1000"
+    restart: unless-stopped
+    env_file:
+      - ${HOME}/projects/khai-phien-ban-so/secrets/mcp-kho.env
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      # Mount vào trong /app để ESM tìm được /app/node_modules (SDK MCP, zod có sẵn trong image).
+      - ${HOME}/projects/khai-phien-ban-so/mcp-kho:/app/mcp-kho:ro
+      - ${HOME}/projects/khai-phien-ban-so/secrets/google-kho:/run/secrets:ro
+      - /mnt/d/KhoTriThuc/nguon:/kho/nguon:ro
+      - /mnt/d/KhoTriThuc/wiki:/kho/wiki:ro
+      - /mnt/d/KhoTriThuc/ghi-nho:/kho/ghi-nho:ro
+    networks: [default]
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  default:
+    name: khai-pbs_default
+    external: true

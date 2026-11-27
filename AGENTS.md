@@ -77,6 +77,7 @@ khai-phien-ban-so/
 ├── openclaw-workspace/   AGENTS.md, SOUL.md của trợ lý; skills/
 ├── scripts/              script kiểm tra, sao lưu, kết nối Google
 ├── mcp-google/           server MCP Google (Sheets, Calendar) chạy container riêng (D21)
+├── mcp-kho/              server MCP chỉ đọc kho tri thức, container riêng (D21, D56)
 ├── web-admin/            web app quản lý (Gói 4)
 ├── secrets/  .env        bí mật — gitignore
 └── tmp/                  tệp tạm — gitignore

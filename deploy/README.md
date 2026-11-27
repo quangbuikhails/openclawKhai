@@ -198,6 +198,47 @@ Chính sách tailnet (Access controls): không dùng mặc định cho phép t�
 
 Kiểm sau khi đổi: iPhone bật Tailscale mở được trang; tắt Tailscale, dùng 4G thì không vào được. `tailscale serve --bg` còn sau khi khởi động lại Windows hay không: kiểm ở lần khởi động lại tới.
 
+## MCP kho tri thức `khai-mcp-kho` (G5-03, D21, D51–D56)
+
+Server MCP chỉ đọc (`mcp-kho/server.mjs`, container `khai-mcp-kho`), chạy trên image OpenClaw đã ghim (SDK MCP, `zod` có sẵn trong `/app/node_modules`, không thêm package). Tệp compose đứng một mình, project riêng `khai-pbs-kho`, nối mạng `khai-pbs_default` của Gateway dạng external; không có `ports:`. Mount chỉ đọc, chỉ thư mục: `/mnt/d/KhoTriThuc/{nguon,wiki,ghi-nho}` → `/kho/...`, `secrets/google-kho` → `/run/secrets`; không mount `.git/`, `.obsidian/`, `README.md` của kho. Không có công cụ ghi.
+
+- Công cụ: `kho_info`, `kho_search`, `kho_read`, `kho_so_lieu`. Markdown đọc lại mỗi lần gọi (sửa trên Obsidian là có ngay). `kho_read` tối đa khoảng 20.000 ký tự mỗi lần, có `con_nua`/`tu_dong_tiep`; một dòng dài hơn giới hạn thì chỉ trả phần đầu và báo `dong_bi_cat` (số dòng) (docs OpenClaw 2026.10.3 không nêu giới hạn độ dài kết quả MCP, server tự giới hạn).
+- Bảng số liệu: đọc dải mở `A:K` (đủ mọi dòng có dữ liệu, không trần cứng; quá 50.000 dòng thì log `canh_bao=so_lieu_lon`), mỗi lần gọi Google chờ tối đa 15 giây; đọc `FORMATTED_VALUE` mọi trang của bảng "Khải Phiên Bản Số – Kho số liệu" bằng SA chỉ đọc riêng (D56). 11 cột là hằng số trong mã, theo README kho; đổi cột trong README thì sửa `COLS` trong `server.mjs`. Thiếu cấu hình, Sheets lỗi hoặc tiêu đề lệch: log `canh_bao=so_lieu`, server vẫn chạy, chỉ `kho_so_lieu` báo lỗi (kiểm lại mỗi lần gọi).
+- Log: mỗi lần gọi một dòng `tool=… ket_qua=… tra_ve=… khop=…` (`tra_ve`: số mục trả cho mô hình, đã cắt theo `limit`; `khop`: tổng số mục khớp); ngoài ra chỉ có dòng khởi động (`lắng nghe cổng`, `kho: N trang`, `so_lieu: … tiêu đề đúng`) và cảnh báo không kèm dữ liệu (`canh_bao=so_lieu`, `canh_bao=so_lieu_lon`, `canh_bao=khoi_dong`, `so_lieu=loi_khac`). Không ghi câu hỏi, đường dẫn, nội dung trang.
+- `secrets/mcp-kho.env` (600): `MCP_KHO_TOKEN` (`openssl rand -hex 32`, khác các token khác), `KHO_SPREADSHEET_ID`; mẫu ở `deploy/.env.example`. Khóa: `secrets/google-kho/google-kho-sa.json` (thư mục 700, tệp 600).
+
+Anh Khải tự làm (không dán khóa, token vào chat hay repo):
+
+1. Google Cloud (cùng dự án đang dùng, Sheets API đã bật): tạo Service Account `khai-mcp-kho`, không gán vai trò; tạo khóa JSON, lưu thành `secrets/google-kho/google-kho-sa.json`, `chmod 600`. Mở bảng "Khải Phiên Bản Số – Kho số liệu" → Chia sẻ → email SA, quyền **Người xem**, bỏ chọn thông báo. Không chia sẻ bảng này cho SA `google-ro` hay SA của `khai-mcp-google`.
+2. Mở `secrets/mcp-kho.env` bằng nano, thay dòng comment `# KHO_SPREADSHEET_ID=…` bằng dòng `KHO_SPREADSHEET_ID=` nối liền ID bảng (phần nằm giữa `/d/` và `/edit` trong địa chỉ bảng). Không dán ID vào dòng lệnh. Kiểm khóa SA mà không mở tệp: `grep -o '"private_key_id": *"[0-9a-f]\{8\}' secrets/google-kho/google-kho-sa.json`.
+3. Bật hoặc tạo lại (ở thư mục gốc repo; không `--remove-orphans`, không đụng container khác):
+
+   ```bash
+   docker compose -p khai-pbs-kho --env-file ~/apps/openclaw/.env -f deploy/docker-compose.mcp-kho.yml up -d --force-recreate khai-mcp-kho
+   docker logs --tail 5 khai-mcp-kho   # phải thấy "bảng số liệu: có cấu hình" và "so_lieu: 1 trang, tiêu đề đúng"
+   ```
+
+4. Đăng ký vào OpenClaw (token ghi thẳng vào `openclaw.json`, như `google`). Cú pháp `mcp set <tên> '<JSON>'` với `url`, `transport`, `headers` và `mcp tools --include` theo `/cli/mcp/registry`, `/cli/mcp/transports` (docs đóng gói trong 2026.10.3 và docs.openclaw.ai, đối chiếu 27/11/2026). `--dry-run` không có trong docs: không dùng, thay bằng sao lưu và `config validate`. Gateway nạp nóng: máy chủ mới có ở lượt sau, máy chủ không đổi giữ kết nối.
+
+   ```bash
+   cd ~/apps/openclaw
+   OC="docker compose exec -T openclaw-gateway node dist/index.js"
+   cp -p ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.truoc-g503
+   $OC mcp set kho "$(python3 -c 'import json,sys; t=[l.split("=",1)[1].strip() for l in open(sys.argv[1]) if l.startswith("MCP_KHO_TOKEN=")][0]; print(json.dumps({"url":"http://khai-mcp-kho:3000/mcp","transport":"streamable-http","headers":{"Authorization":"Bearer "+t}}))' ~/projects/khai-phien-ban-so/secrets/mcp-kho.env)" > /dev/null; echo "mcp set: mã thoát $?"
+   $OC mcp tools kho --include 'kho_*'
+   # Kiểm, không in token:
+   python3 -c 'import json,os; s=json.load(open(os.path.expanduser("~/.openclaw/openclaw.json")))["mcp"]["servers"]; [print(k, v.get("url"), v.get("transport"), "headers:", "có" if v.get("headers") else "KHÔNG", "toolFilter:", v.get("toolFilter")) for k,v in s.items()]'
+   $OC config validate
+   curl -fsS http://127.0.0.1:28789/healthz
+   $OC mcp probe kho
+   $OC mcp probe google
+   $OC models status
+   ```
+
+Xoay `MCP_KHO_TOKEN`: sửa `secrets/mcp-kho.env`, tạo lại container (bước 3), chạy lại `mcp set kho …` (bước 4). Thu hồi quyền bảng: bỏ chia sẻ SA trên bảng, xóa khóa trong Google Cloud; không ảnh hưởng `web-admin`, `khai-mcp-google`.
+
+Hoàn tác: `$OC mcp unset kho` (hoặc chép lại `openclaw.json.truoc-g503`), rồi `docker compose -p khai-pbs-kho --env-file ~/apps/openclaw/.env -f deploy/docker-compose.mcp-kho.yml down` (chỉ xóa `khai-mcp-kho`; mạng `khai-pbs_default` là external nên không bị xóa).
+
 ## MCP Google (G2-01B, spike)
 
 Server MCP nhỏ (`mcp-google/server.mjs`) chạy ở container riêng `khai-mcp-google`, dùng lại image OpenClaw đang ghim digest (Node và SDK MCP có sẵn trong `/app/node_modules`, không thêm package). HTTP trong mạng `khai-pbs_default`, không publish cổng. Chỉ thao tác đúng một bảng tính và một lịch theo `SPREADSHEET_ID`, `CALENDAR_ID` trong `secrets/mcp-google.env` (đổi tên từ `TEST_SPREADSHEET_ID`, `TEST_CALENDAR_ID` ở G2-04: phải sửa tệp này trước khi chạy lại). `SHEET_MODE`, `CAL_MODE` (`test` mặc định, hoặc `prod`) phải khớp tên bảng tính, lịch; chế độ `test` chỉ ghi vào việc có Nội dung cần xử lý bắt đầu `[TEST]`. Công cụ: `task_list`, `task_add`, `task_set_status`, `task_set_due`, `date_today`, `cal_*`; không có công cụ xóa dòng. `cal_create`, `cal_update`, `cal_delete` chỉ tác động sự kiện do trợ lý tạo (dấu `private.owner`, PLAN.md D25), sự kiện chủ tự tạo chỉ đọc; `CAL_MODE=test` bắt buộc tiêu đề bắt đầu `[TEST]`.
