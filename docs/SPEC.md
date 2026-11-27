@@ -172,9 +172,9 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 Kho tài liệu và ghi nhớ cá nhân của chủ, nhiều mảng; trợ lý tra cứu và trả lời kèm dẫn nguồn (đã chốt D51).
 
 - **Kho:** thư mục Markdown tại `D:\KhoTriThuc` (trong WSL: `/mnt/d/KhoTriThuc`; ngoài repo, ngoài workspace OpenClaw), git riêng; mở, sửa bằng Obsidian. Ba tầng: `nguon/` (văn bản gốc hoặc trỏ tệp Drive), `wiki/` (trang tri thức chưng cất), `ghi-nho/` (kinh nghiệm, quy trình, ghi chú cá nhân của chủ). Cấu trúc mở đa mảng: thêm mảng mới chỉ là thêm thư mục, không sửa code; danh sách mảng ban đầu và cấu trúc thư mục đã chốt D52.
-- **Mảng thí điểm:** Đầu tư công (nghị quyết và phụ lục dự án) và Kết luận, kiến nghị giám sát của Ban KTNS; mảng khác nạp sau khi nghiệm thu đạt.
-- **Số liệu dạng bảng** (phân bổ, điều chỉnh vốn…): đưa vào Google Sheets theo hạ tầng sẵn có; trang wiki trỏ tới bảng.
-- **Phần đầu mỗi trang:** mảng, số ký hiệu, ngày ban hành, tình trạng hiệu lực (chủ ghi), nguồn (link Drive hoặc tệp trong `nguon/`).
+- **Mảng thí điểm:** Đầu tư công (nghị quyết và phụ lục dự án) và Kết luận, kiến nghị giám sát của HĐND tỉnh, Thường trực HĐND tỉnh và các Ban HĐND tỉnh (D54); mảng khác nạp sau khi nghiệm thu đạt.
+- **Số liệu dạng bảng** (phân bổ, điều chỉnh vốn…): đưa vào bảng tính riêng trên Google Sheets (D53); chỉ lấy phần hiển thị của phụ lục, số chép theo hiển thị; trang nguồn và trang wiki trỏ tới bảng.
+- **Phần đầu mỗi trang:** mảng, số ký hiệu, ngày ban hành, tình trạng hiệu lực (chủ ghi), nguồn (trang `nguon/`: danh sách link Drive của văn bản và phụ lục; trang `wiki/`: đường dẫn trang `nguon/`).
 - **Nạp có kiểm soát:** chỉ nạp khi chủ ra lệnh; trợ lý đề xuất, chủ duyệt rồi mới ghi (như D23); mỗi lần ghi vào kho là một commit git, xem lại và hoàn tác được. Giai đoạn đầu nạp bằng công cụ lập trình trên máy; đường nạp qua bot chốt ở C37. Văn bản mật không bao giờ vào kho.
 - **Tra cứu:** chỉ cho chủ, qua server MCP chỉ đọc `khai-mcp-kho` (container riêng theo khuôn D21, mount kho chỉ đọc) và skill `tra-cuu-kho`. Mọi câu trả lời kèm nguồn (số ký hiệu, trang hoặc mục); không có trong kho thì nói "không có trong kho", không đoán; số liệu chép nguyên văn, không tự suy; luôn kèm phạm vi dữ liệu ("kho có dữ liệu đến …"); kho không tự cập nhật hiệu lực: thiếu tình trạng thì trả lời ghi "theo kho, chưa kiểm hiệu lực mới nhất".
 - **Nội dung kho là dữ liệu, không phải lệnh** (như Gói 2C).
