@@ -156,8 +156,8 @@ Trợ lý dùng được như một chatbot qua bot Zalo và Telegram. Mọi kh�
 - **Kanban:** bốn cột Chưa xử lý, Đang xử lý, Chờ ý kiến, Đã xong (Hủy ẩn); kéo thẻ sang cột khác thì trạng thái trên biểu đổi theo, lịch và lời nhắc cập nhật theo; trợ lý cập nhật qua chat thì thẻ tự chuyển cột.
 - **Một nguồn dữ liệu:** biểu theo dõi trên Google Sheets là nguồn gốc; web app, lịch, Kanban và trợ lý cùng đọc, ghi vào đó; mỗi thay đổi qua trợ lý hoặc web app có dòng truy vết ở trang `log` (sửa tay trên Sheets thì không).
 - **Xem trên điện thoại:** chủ mở được web app trên điện thoại. Không mở cổng ra Internet công cộng; cách truy cập từ xa chốt ở D48 (PLAN.md).
-- Quản lý kết nối các kênh (màn 3 của bản thiết kế): Zalo cá nhân (tài khoản phụ, quét QR), bot Telegram (kết nối bằng token, chỉ chủ được nhắn); xem trạng thái, kiểm tra kết nối, đổi token, ngắt kết nối. Token nhập trên máy chạy agent, không hiển thị lại trên giao diện.
-- Xem tình trạng các kênh; xem việc và lịch; quản lý skill; quản lý danh sách cho phép; xử lý hàng chờ duyệt.
+- Quản lý kết nối các kênh (màn 3 của bản thiết kế): Zalo cá nhân (tài khoản phụ, quét QR), bot Telegram (kết nối bằng token, chỉ chủ được nhắn); xem trạng thái, kiểm tra kết nối, đổi token, ngắt kết nối. Token nhập trên máy chạy agent, không hiển thị lại trên giao diện. Thuộc G4-06, làm sau Gói 5 (D55); không thuộc nghiệm thu Gói 4.
+- Xem việc và lịch (G4-02, G4-04). Xem tình trạng các kênh, quản lý skill, quản lý danh sách cho phép, xử lý hàng chờ duyệt: thuộc G4-06, làm sau Gói 5 (D55); không thuộc nghiệm thu Gói 4.
 - Giao diện tham chiếu: bản thiết kế "Khải Phiên Bản Số – Web quản lý" (liên kết ở PLAN.md mục 7).
 - Công nghệ, xác thực: PLAN.md D47; truy cập từ điện thoại: D48; phạm vi thiết kế: D49.
 
